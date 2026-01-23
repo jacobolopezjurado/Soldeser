@@ -2,12 +2,18 @@ import 'dotenv/config';
 
 export default {
   expo: {
-    name: "Soldeser Fichaje",
+    name: "SOLDESER",
     slug: "soldeser-fichaje",
     version: "1.0.0",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
     newArchEnabled: false,
+    icon: "./assets/icon.png",
+    splash: {
+      image: "./assets/splash.png",
+      resizeMode: "contain",
+      backgroundColor: "#1E3A5F"
+    },
     ios: {
       supportsTablet: true,
       bundleIdentifier: "com.soldeser.fichaje",
@@ -18,7 +24,8 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        backgroundColor: "#1a1a2e"
+        foregroundImage: "./assets/icon.png",
+        backgroundColor: "#1E3A5F"
       },
       package: "com.soldeser.fichaje",
       permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
@@ -38,7 +45,7 @@ export default {
     ],
     extra: {
       apiUrlDev: process.env.API_URL_DEV || "http://localhost:3001/api",
-      apiUrlProd: process.env.API_URL_PROD || "https://tu-backend.railway.app/api",
+      apiUrlProd: process.env.API_URL_PROD || "https://soldeser-production.up.railway.app/api",
       eas: {
         projectId: "077f3d3d-4d17-4aba-9b8d-a74c84d3e24c"
       }
