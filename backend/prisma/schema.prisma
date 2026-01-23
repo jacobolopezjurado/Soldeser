@@ -1,0 +1,169 @@
+// Prisma Schema para Soldeser - App de Fichaje Construcción
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Roles de usuario
+enum UserRole {
+  ADMIN      // Administrador general
+  SUPERVISOR // Encargado de obra
+  WORKER     // Trabajador
+}
+
+// Estado de fichaje
+enum ClockType {
+  CLOCK_IN   // Entrada
+  CLOCK_OUT  // Salida
+}
+
+// Estado de sincronización (para modo offline)
+enum SyncStatus {
+  SYNCED     // Sincronizado con servidor
+  PENDING    // Pendiente de sincronización
+  FAILED     // Error al sincronizar
+}
+
+// Usuarios del sistema
+model User {
+  id            String    @id @default(uuid())
+  firebaseUid   String?   @unique @map("firebase_uid")
+  email         String    @unique
+  passwordHash  String?   @map("password_hash") // Para login alternativo sin Firebase
+  pin           String?   // PIN de 4-6 dígitos para fichaje rápido
+  firstName     String    @map("first_name")
+  lastName      String    @map("last_name")
+  dni           String    @unique // Documento de identidad
+  phone         String?
+  role          UserRole  @default(WORKER)
+  isActive      Boolean   @default(true) @map("is_active")
+  
+  // RGPD
+  gdprConsent       Boolean   @default(false) @map("gdpr_consent")
+  gdprConsentDate   DateTime? @map("gdpr_consent_date")
+  locationConsent   Boolean   @default(false) @map("location_consent")
+  
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  // Relaciones
+  clockRecords  ClockRecord[]
+  assignments   WorksiteAssignment[]
+  auditLogs     AuditLog[]
+  
+  @@map("users")
+}
+
+// Obras / Lugares de trabajo
+model Worksite {
+  id          String    @id @default(uuid())
+  name        String
+  address     String
+  city        String
+  
+  // Geolocalización para verificar presencia
+  latitude    Float
+  longitude   Float
+  radiusMeters Int      @default(100) @map("radius_meters") // Radio permitido en metros
+  
+  isActive    Boolean   @default(true) @map("is_active")
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  
+  // Relaciones
+  clockRecords ClockRecord[]
+  assignments  WorksiteAssignment[]
+  
+  @@map("worksites")
+}
+
+// Asignación de trabajadores a obras
+model WorksiteAssignment {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  worksiteId  String    @map("worksite_id")
+  
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime? @map("end_date")
+  isActive    Boolean   @default(true) @map("is_active")
+  
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  worksite    Worksite  @relation(fields: [worksiteId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, worksiteId, startDate])
+  @@map("worksite_assignments")
+}
+
+// Registros de fichaje
+model ClockRecord {
+  id              String      @id @default(uuid())
+  
+  // Identificador único del dispositivo para evitar duplicados offline
+  deviceRecordId  String?     @unique @map("device_record_id")
+  
+  userId          String      @map("user_id")
+  worksiteId      String?     @map("worksite_id")
+  
+  type            ClockType
+  timestamp       DateTime    @default(now())
+  
+  // Geolocalización
+  latitude        Float?
+  longitude       Float?
+  accuracy        Float?      // Precisión GPS en metros
+  
+  // Verificación de ubicación
+  isWithinGeofence Boolean?   @map("is_within_geofence")
+  distanceFromSite Float?     @map("distance_from_site") // Distancia a la obra en metros
+  
+  // Sincronización offline
+  syncStatus      SyncStatus  @default(SYNCED) @map("sync_status")
+  syncedAt        DateTime?   @map("synced_at")
+  
+  // Metadatos
+  deviceInfo      String?     @map("device_info")
+  notes           String?
+  
+  // Flag para fichajes manuales (por admin)
+  isManual        Boolean     @default(false) @map("is_manual")
+  manualReason    String?     @map("manual_reason")
+  
+  createdAt       DateTime    @default(now()) @map("created_at")
+  
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  worksite        Worksite?   @relation(fields: [worksiteId], references: [id], onDelete: SetNull)
+  
+  @@index([userId, timestamp])
+  @@index([worksiteId, timestamp])
+  @@map("clock_records")
+}
+
+// Logs de auditoría para RGPD
+model AuditLog {
+  id          String    @id @default(uuid())
+  userId      String?   @map("user_id")
+  action      String    // LOGIN, LOGOUT, CLOCK_IN, CLOCK_OUT, DATA_ACCESS, etc.
+  resource    String?   // Recurso afectado
+  resourceId  String?   @map("resource_id")
+  details     Json?     // Detalles adicionales
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
+  
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
+}
