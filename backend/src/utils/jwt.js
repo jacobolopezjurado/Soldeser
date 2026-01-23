@@ -1,4 +1,19 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+
+// Opciones de seguridad para JWT
+const JWT_OPTIONS = {
+  issuer: 'soldeser-api',
+  audience: 'soldeser-app',
+  algorithm: 'HS256',
+};
+
+/**
+ * Genera un ID único para el token
+ */
+const generateTokenId = () => {
+  return crypto.randomBytes(16).toString('hex');
+};
 
 /**
  * Genera un token JWT
@@ -6,9 +21,20 @@ const jwt = require('jsonwebtoken');
  * @returns {string} Token JWT
  */
 const generateToken = (payload) => {
-  return jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+  return jwt.sign(
+    {
+      ...payload,
+      jti: generateTokenId(), // ID único del token
+      iat: Math.floor(Date.now() / 1000),
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+      issuer: JWT_OPTIONS.issuer,
+      audience: JWT_OPTIONS.audience,
+      algorithm: JWT_OPTIONS.algorithm,
+    }
+  );
 };
 
 /**
@@ -21,6 +47,7 @@ const generateUserToken = (user) => {
     userId: user.id,
     email: user.email,
     role: user.role,
+    // No incluir datos sensibles en el token
   };
 
   const token = generateToken(payload);
@@ -38,7 +65,11 @@ const generateUserToken = (user) => {
  * @returns {Object} Payload decodificado
  */
 const verifyToken = (token) => {
-  return jwt.verify(token, process.env.JWT_SECRET);
+  return jwt.verify(token, process.env.JWT_SECRET, {
+    issuer: JWT_OPTIONS.issuer,
+    audience: JWT_OPTIONS.audience,
+    algorithms: [JWT_OPTIONS.algorithm],
+  });
 };
 
 /**

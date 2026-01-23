@@ -321,7 +321,9 @@ router.post(
     body('currentPassword').notEmpty().withMessage('Contraseña actual requerida'),
     body('newPassword')
       .isLength({ min: 8 })
-      .withMessage('Nueva contraseña debe tener al menos 8 caracteres'),
+      .withMessage('Nueva contraseña debe tener al menos 8 caracteres')
+      .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+      .withMessage('La contraseña debe contener mayúsculas, minúsculas y números'),
   ],
   asyncHandler(async (req, res) => {
     const errors = validationResult(req);

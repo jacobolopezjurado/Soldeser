@@ -5,6 +5,7 @@ const { authenticate, requireGdprConsent, requireLocationConsent } = require('..
 const { asyncHandler } = require('../middleware/errorHandler');
 const { logAudit, AuditActions } = require('../middleware/audit');
 const { isWithinGeofence, findNearestWorksite, isValidCoordinates } = require('../utils/geo');
+const { validateSpainCoordinates } = require('../middleware/security');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -42,6 +43,12 @@ router.post(
       timestamp,
       deviceInfo 
     } = req.body;
+
+    // Validar que las coordenadas son razonables (España + Canarias)
+    if (!validateSpainCoordinates(latitude, longitude)) {
+      console.warn(`⚠️ Coordenadas sospechosas: ${latitude}, ${longitude} - Usuario: ${req.user.id}`);
+      // No bloquear, solo advertir (podría haber casos legítimos)
+    }
 
     // Verificar si ya hay un fichaje de entrada sin salida
     const lastClock = await prisma.clockRecord.findFirst({

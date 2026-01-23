@@ -13,6 +13,7 @@ const syncRoutes = require('./routes/sync');
 const exportRoutes = require('./routes/export');
 const adminRoutes = require('./routes/admin');
 const { errorHandler } = require('./middleware/errorHandler');
+const { sanitizeBody, securityHeaders, detectAttacks } = require('./middleware/security');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,26 +21,60 @@ const PORT = process.env.PORT || 3000;
 // Trust proxy (necesario para Render/Railway)
 app.set('trust proxy', 1);
 
-// Seguridad
-app.use(helmet());
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://tu-dominio.com'] 
-    : '*',
-  credentials: true,
+// Seguridad - Headers HTTP
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000, // 1 año
+    includeSubDomains: true,
+  },
 }));
 
-// Rate limiting
+// CORS - Apps móviles pueden conectar desde cualquier origen
+app.use(cors({
+  origin: '*', // Las apps móviles no tienen origen fijo
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+// Rate limiting general
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // máximo 100 requests por ventana
+  max: 200, // máximo 200 requests por ventana
   message: { error: 'Demasiadas peticiones, intenta de nuevo más tarde' },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 app.use('/api/', limiter);
 
+// Rate limiting estricto para login (prevenir fuerza bruta)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // máximo 10 intentos de login
+  message: { error: 'Demasiados intentos de login. Espera 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // No contar logins exitosos
+});
+app.use('/api/auth/login', loginLimiter);
+app.use('/api/auth/login-pin', loginLimiter);
+
 // Parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' })); // Reducido para prevenir DoS
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Seguridad adicional
+app.use(securityHeaders);
+app.use(sanitizeBody);
+app.use(detectAttacks);
 
 // Logging
 if (process.env.NODE_ENV !== 'test') {
