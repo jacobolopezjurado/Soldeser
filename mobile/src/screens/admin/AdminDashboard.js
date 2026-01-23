@@ -17,7 +17,10 @@ import * as Sharing from 'expo-sharing';
 import { api } from '../../config/api';
 import { colors, spacing, borderRadius, typography } from '../../config/theme';
 
+import { useNavigation } from '@react-navigation/native';
+
 export default function AdminDashboard() {
+  const navigation = useNavigation();
   const [dashboard, setDashboard] = useState(null);
   const [activeWorkers, setActiveWorkers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -159,6 +162,21 @@ export default function AdminDashboard() {
             color={colors.warning}
           />
         </View>
+
+        {/* Accesos rápidos */}
+        <TouchableOpacity 
+          style={styles.quickAction}
+          onPress={() => navigation.navigate('UsersManagement')}
+        >
+          <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '20' }]}>
+            <Ionicons name="people" size={24} color={colors.primary} />
+          </View>
+          <View style={styles.quickActionInfo}>
+            <Text style={styles.quickActionTitle}>Gestionar Usuarios</Text>
+            <Text style={styles.quickActionDesc}>Añadir, editar y desactivar trabajadores</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        </TouchableOpacity>
 
         {/* Alertas */}
         {dashboard?.stats?.outsideGeofenceToday > 0 && (
@@ -500,5 +518,33 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
     fontWeight: '600',
+  },
+  quickAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickActionInfo: {
+    flex: 1,
+  },
+  quickActionTitle: {
+    fontSize: typography.fontSize.md,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  quickActionDesc: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textMuted,
   },
 });

@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import HomeScreen from '../screens/main/HomeScreen';
 import HistoryScreen from '../screens/main/HistoryScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
-import AdminDashboard from '../screens/admin/AdminDashboard';
+import AdminStack from './AdminStack';
 
 const Tab = createBottomTabNavigator();
 
@@ -64,7 +64,7 @@ export default function MainTabs() {
       {isAdmin && (
         <Tab.Screen 
           name="Admin" 
-          component={AdminDashboard}
+          component={AdminStack}
           options={{
             tabBarLabel: 'Panel',
             tabBarIcon: ({ focused, color }) => (
