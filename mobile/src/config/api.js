@@ -2,16 +2,20 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import Constants from 'expo-constants';
 
-// URLs desde variables de entorno (app.config.js)
-const API_URL_DEV = Constants.expoConfig?.extra?.apiUrlDev || 'http://localhost:3001/api';
-// URL de producción en Railway
-const API_URL = 'https://soldeser-production.up.railway.app/api';
+// URLs desde app.config.js extra (variables de entorno en .env)
+// API_URL_DEV: para Expo Go. En dispositivo físico usa tu IP (ej: http://192.168.1.x:3001/api) o Railway
+// API_URL_PROD: para builds de producción
+const extra = Constants.expoConfig?.extra || {};
+const API_URL_DEV = extra.apiUrlDev || 'http://localhost:3001/api';
+const API_URL_PROD = extra.apiUrlProd || 'https://soldeser-production.up.railway.app/api';
 
-console.log('🔗 API URL:', API_URL); // Para debug
+const API_URL = __DEV__ ? API_URL_DEV : API_URL_PROD;
+
+console.log('🔗 API URL:', API_URL, __DEV__ ? '(dev)' : '(prod)');
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 15000,
+  timeout: 45000, // 45s - Railway puede tardar en despertar (cold start)
   headers: {
     'Content-Type': 'application/json',
   },

@@ -1,0 +1,10 @@
+# Nixpacks config para Railway
+# Build: solo generate. Migrate se ejecuta al iniciar (startCommand en railway.toml)
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["npm ci", "npx prisma generate"]
+
+[start]
+cmd = "npx prisma migrate deploy && node src/index.js"

@@ -105,15 +105,15 @@ async function main() {
   ];
 
   for (const ws of worksites) {
-    const worksite = await prisma.worksite.upsert({
-      where: { id: ws.name.toLowerCase().replace(/\s/g, '-') },
-      update: {},
-      create: {
-        ...ws,
-        startDate: new Date(),
-      },
+    const existing = await prisma.worksite.findFirst({
+      where: { name: ws.name },
     });
-    console.log('✅ Obra creada:', worksite.name);
+    const worksite = existing
+      ? existing
+      : await prisma.worksite.create({
+          data: { ...ws, startDate: new Date() },
+        });
+    if (!existing) console.log('✅ Obra creada:', worksite.name);
   }
 
   console.log('');

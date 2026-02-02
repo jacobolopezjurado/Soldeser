@@ -1,28 +1,77 @@
+const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { verifyToken } = require('../utils/jwt');
 
 const prisma = new PrismaClient();
 
 /**
- * Middleware de autenticación JWT
+ * Intenta verificar el token como JWT de Supabase
+ * @returns {Object|null} Usuario si es token Supabase válido, null si no
+ */
+const verifySupabaseToken = async (token) => {
+  const supabaseJwtSecret = process.env.SUPABASE_JWT_SECRET;
+  if (!supabaseJwtSecret) return null;
+
+  try {
+    const decoded = jwt.verify(token, supabaseJwtSecret, {
+      algorithms: ['HS256'],
+    });
+    const email = decoded.email;
+    if (!email) return null;
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isActive: true,
+        gdprConsent: true,
+        locationConsent: true,
+      },
+    });
+    return user;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Middleware de autenticación JWT (Soldeser o Supabase)
  */
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'Token de autenticación requerido',
-        code: 'AUTH_REQUIRED' 
+        code: 'AUTH_REQUIRED',
       });
     }
-    
+
     const token = authHeader.split(' ')[1];
-    
+
+    // 1. Intentar como token Supabase
+    const supabaseUser = await verifySupabaseToken(token);
+    if (supabaseUser) {
+      if (!supabaseUser.isActive) {
+        return res.status(403).json({
+          error: 'Cuenta desactivada. Contacta con administración.',
+          code: 'ACCOUNT_DISABLED',
+        });
+      }
+      req.user = supabaseUser;
+      req.token = token;
+      return next();
+    }
+
+    // 2. Intentar como token Soldeser (JWT propio)
     try {
       const decoded = verifyToken(token);
-      
-      // Verificar que el usuario existe y está activo
+
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
         select: {
@@ -36,35 +85,34 @@ const authenticate = async (req, res, next) => {
           locationConsent: true,
         },
       });
-      
+
       if (!user) {
-        return res.status(401).json({ 
+        return res.status(401).json({
           error: 'Usuario no encontrado',
-          code: 'USER_NOT_FOUND' 
+          code: 'USER_NOT_FOUND',
         });
       }
-      
+
       if (!user.isActive) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: 'Cuenta desactivada. Contacta con administración.',
-          code: 'ACCOUNT_DISABLED' 
+          code: 'ACCOUNT_DISABLED',
         });
       }
-      
+
       req.user = user;
       req.token = token;
       next();
-      
     } catch (jwtError) {
       if (jwtError.name === 'TokenExpiredError') {
-        return res.status(401).json({ 
+        return res.status(401).json({
           error: 'Token expirado',
-          code: 'TOKEN_EXPIRED' 
+          code: 'TOKEN_EXPIRED',
         });
       }
-      return res.status(401).json({ 
+      return res.status(401).json({
         error: 'Token inválido',
-        code: 'INVALID_TOKEN' 
+        code: 'INVALID_TOKEN',
       });
     }
   } catch (error) {

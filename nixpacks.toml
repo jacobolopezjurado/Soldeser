@@ -1,0 +1,14 @@
+# Config para Railway cuando NO se usa Root Directory
+# Fuerza build solo del backend (evita instalar mobile/React Native)
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["cd backend && npm ci && npx prisma generate"]
+
+# NO ejecutar migrate en build - falla (BD inaccesible). Se ejecuta al iniciar.
+[phases.build]
+cmds = ["echo 'Backend build complete'"]
+
+[start]
+cmd = "cd backend && npx prisma migrate deploy && node src/index.js"

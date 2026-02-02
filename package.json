@@ -1,0 +1,12 @@
+{
+  "name": "soldeser",
+  "private": true,
+  "description": "Monorepo - usar backend/ o mobile/ según el servicio",
+  "scripts": {
+    "build": "cd backend && npm ci && npx prisma generate",
+    "start": "cd backend && npx prisma migrate deploy && node src/index.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
