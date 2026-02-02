@@ -80,14 +80,8 @@ export default function AdminDashboard() {
         ? `fichajes_${today.toISOString().split('T')[0]}.csv`
         : `resumen_horas_${today.toISOString().split('T')[0]}.csv`;
       
-      const docDir = FileSystem.documentDirectory || FileSystem.cacheDirectory;
-      if (!docDir) {
-        throw new Error('No hay directorio disponible para guardar');
-      }
-      const fileUri = docDir + filename;
-      await FileSystem.writeAsStringAsync(fileUri, response.data, {
-        encoding: 'utf8',
-      });
+      const fileUri = FileSystem.documentDirectory + filename;
+      await FileSystem.writeAsStringAsync(fileUri, response.data);
 
       // Compartir archivo
       if (await Sharing.isAvailableAsync()) {

@@ -75,13 +75,6 @@ export const typography = {
   },
 };
 
-// Aliases for components that use COLORS/FONTS (backward compatibility)
-export const COLORS = colors;
-export const FONTS = {
-  ...typography.fontFamily,
-  semiBold: typography.fontFamily.medium,
-};
-
 export const shadows = {
   sm: {
     shadowColor: '#000',

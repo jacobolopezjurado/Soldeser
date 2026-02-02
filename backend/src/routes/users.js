@@ -5,7 +5,6 @@ const { PrismaClient } = require('@prisma/client');
 const { authenticate, authorize } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { logAudit, AuditActions } = require('../middleware/audit');
-const { createSupabaseUser } = require('../utils/supabase');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -194,15 +193,6 @@ router.post(
         createdAt: true,
       },
     });
-
-    // Crear usuario en Supabase Auth si está configurado (para login con email)
-    if (password) {
-      await createSupabaseUser(email, password, {
-        firstName,
-        lastName,
-        role,
-      });
-    }
 
     await logAudit({
       userId: req.user.id,

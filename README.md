@@ -19,7 +19,6 @@ App de control horario para empresas de construcción con verificación de geolo
 - **PostgreSQL** - Base de datos
 - **Prisma** - ORM
 - **JWT** - Autenticación
-- **Supabase** - Auth email/contraseña (opcional)
 - **Firebase Admin** - Auth adicional
 - **Railway** - Deploy recomendado
 
@@ -28,8 +27,7 @@ App de control horario para empresas de construcción con verificación de geolo
 - **expo-location** - Geolocalización
 - **expo-secure-store** - Almacenamiento seguro de tokens
 - **AsyncStorage** - Cache offline
-- **Supabase Auth** - Login email/contraseña (opcional)
-- **Firebase Auth** - Autenticación (legacy)
+- **Firebase Auth** - Autenticación
 
 ## 🚀 Instalación
 
@@ -61,14 +59,7 @@ DATABASE_URL="postgresql://usuario:password@localhost:5432/soldeser"
 JWT_SECRET="genera-un-secreto-seguro"
 JWT_EXPIRES_IN="7d"
 PORT=3000
-
-# Supabase (opcional - para login con email)
-# SUPABASE_URL=https://tu-proyecto.supabase.co
-# SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
-# SUPABASE_JWT_SECRET=tu-jwt-secret
 ```
-
-Ver [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) para la configuración completa de Supabase.
 
 Inicializar la base de datos:
 ```bash

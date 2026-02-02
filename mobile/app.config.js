@@ -7,6 +7,7 @@ export default {
     version: "1.0.0",
     orientation: "portrait",
     userInterfaceStyle: "automatic",
+    newArchEnabled: false,
     icon: "./assets/icon.png",
     splash: {
       image: "./assets/splash.png",
@@ -45,8 +46,6 @@ export default {
     extra: {
       apiUrlDev: process.env.API_URL_DEV || "http://localhost:3001/api",
       apiUrlProd: process.env.API_URL_PROD || "https://soldeser-production.up.railway.app/api",
-      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       eas: {
         projectId: "077f3d3d-4d17-4aba-9b8d-a74c84d3e24c"
       }
