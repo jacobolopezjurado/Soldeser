@@ -98,3 +98,10 @@ export const shadows = {
     elevation: 10,
   },
 };
+
+// Aliases para compatibilidad
+export const COLORS = colors;
+export const FONTS = {
+  ...typography.fontFamily,
+  semiBold: 'System',
+};
