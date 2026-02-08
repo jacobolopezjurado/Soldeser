@@ -1,6 +1,7 @@
-import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../config/theme';
 
@@ -13,22 +14,18 @@ import MainTabs from './MainTabs';
 
 const Stack = createNativeStackNavigator();
 
-const LoadingScreen = () => (
-  <View style={{ 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    backgroundColor: colors.background 
-  }}>
-    <ActivityIndicator size="large" color={colors.primary} />
-  </View>
-);
-
 export default function RootNavigator() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
+  // Ocultar splash nativo cuando Auth esté listo (evita doble logo)
+  useEffect(() => {
+    if (!isLoading) {
+      SplashScreen.hideAsync();
+    }
+  }, [isLoading]);
+
   if (isLoading) {
-    return <LoadingScreen />;
+    return <View style={styles.splash} />;
   }
 
   return (
@@ -52,3 +49,10 @@ export default function RootNavigator() {
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  splash: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+});

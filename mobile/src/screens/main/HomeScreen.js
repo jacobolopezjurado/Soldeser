@@ -257,13 +257,13 @@ export default function HomeScreen() {
             disabled={isClocking || isLoading}
           >
             {isClocking ? (
-              <ActivityIndicator size="large" color={colors.background} />
+              <ActivityIndicator size="large" color={colors.text} />
             ) : (
               <>
                 <Ionicons 
                   name={isClockedIn ? 'exit-outline' : 'enter-outline'} 
                   size={48} 
-                  color={colors.background} 
+                  color={colors.text} 
                 />
                 <Text style={styles.clockButtonText}>
                   {isClockedIn ? 'FICHAR SALIDA' : 'FICHAR ENTRADA'}
@@ -290,7 +290,7 @@ export default function HomeScreen() {
 
         {/* Info */}
         <View style={styles.infoCard}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
+          <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
           <Text style={styles.infoText}>
             Tu ubicación se registrará únicamente al fichar para verificar tu presencia en la obra.
           </Text>
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
   clockButtonText: {
     fontSize: typography.fontSize.xl,
     fontWeight: '800',
-    color: colors.background,
+    color: colors.text,
     marginTop: spacing.sm,
     letterSpacing: 2,
   },
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   },
   syncButton: {
     fontSize: typography.fontSize.sm,
-    color: colors.primary,
+    color: colors.accent,
     fontWeight: '600',
   },
   infoCard: {
@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontSize: typography.fontSize.sm,
-    color: colors.textMuted,
+    color: colors.textSecondary,
     lineHeight: 18,
   },
 });

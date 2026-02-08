@@ -3,6 +3,7 @@ import {
   View,
   Text,
   TextInput,
+  Image,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
@@ -71,12 +72,15 @@ export default function LoginScreen() {
             keyboardShouldPersistTaps="handled"
             bounces={false}
           >
-            {/* Header */}
+            {/* Header con logo */}
             <View style={styles.header}>
               <View style={styles.logoContainer}>
-                <Ionicons name="construct" size={60} color={colors.primary} />
+                <Image
+                  source={require('../../../assets/logo.png')}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
               </View>
-              <Text style={styles.title}>SOLDESER</Text>
               <Text style={styles.subtitle}>Sistema de Fichaje</Text>
             </View>
 
@@ -92,7 +96,7 @@ export default function LoginScreen() {
                 <Ionicons 
                   name="mail-outline" 
                   size={18} 
-                  color={loginMode === 'email' ? colors.background : colors.textSecondary} 
+                  color={loginMode === 'email' ? colors.text : colors.textSecondary} 
                 />
                 <Text style={[
                   styles.toggleText,
@@ -111,7 +115,7 @@ export default function LoginScreen() {
                 <Ionicons 
                   name="keypad-outline" 
                   size={18} 
-                  color={loginMode === 'pin' ? colors.background : colors.textSecondary} 
+                  color={loginMode === 'pin' ? colors.text : colors.textSecondary} 
                 />
                 <Text style={[
                   styles.toggleText,
@@ -232,10 +236,10 @@ export default function LoginScreen() {
                 activeOpacity={0.8}
               >
                 {isLoading ? (
-                  <ActivityIndicator color={colors.background} />
+                  <ActivityIndicator color={colors.text} />
                 ) : (
                   <>
-                    <Ionicons name="log-in-outline" size={22} color={colors.background} />
+                    <Ionicons name="log-in-outline" size={22} color={colors.text} />
                     <Text style={styles.loginButtonText}>Entrar</Text>
                   </>
                 )}
@@ -282,15 +286,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   logoContainer: {
-    width: 100,
+    width: 180,
     height: 100,
-    borderRadius: borderRadius.xl,
-    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
-    borderWidth: 2,
-    borderColor: colors.primary,
+  },
+  logo: {
+    width: '100%',
+    height: '100%',
   },
   title: {
     fontSize: typography.fontSize.xxl,
@@ -320,7 +324,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   toggleButtonActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
   },
   toggleText: {
     fontSize: typography.fontSize.sm,
@@ -328,7 +332,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   toggleTextActive: {
-    color: colors.background,
+    color: colors.text,
   },
   form: {
     gap: spacing.md,
@@ -370,7 +374,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     gap: spacing.sm,
@@ -381,7 +385,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   loginButtonText: {
-    color: colors.background,
+    color: colors.text,
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
   },

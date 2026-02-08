@@ -102,7 +102,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const StatCard = ({ icon, label, value, color = colors.primary }) => (
+  const StatCard = ({ icon, label, value, color = colors.accent }) => (
     <View style={styles.statCard}>
       <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
         <Ionicons name={icon} size={24} color={color} />
@@ -116,7 +116,7 @@ export default function AdminDashboard() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.accent} />
         </View>
       </SafeAreaView>
     );
@@ -127,7 +127,7 @@ export default function AdminDashboard() {
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }
       >
         {/* Header */}
@@ -168,14 +168,14 @@ export default function AdminDashboard() {
           style={styles.quickAction}
           onPress={() => navigation.navigate('UsersManagement')}
         >
-          <View style={[styles.quickActionIcon, { backgroundColor: colors.primary + '20' }]}>
-            <Ionicons name="people" size={24} color={colors.primary} />
+            <View style={[styles.quickActionIcon, { backgroundColor: colors.accent + '20' }]}>
+            <Ionicons name="people" size={24} color={colors.accent} />
           </View>
           <View style={styles.quickActionInfo}>
             <Text style={styles.quickActionTitle}>Gestionar Usuarios</Text>
             <Text style={styles.quickActionDesc}>Añadir, editar y desactivar trabajadores</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
 
         {/* Alertas */}
@@ -243,7 +243,7 @@ export default function AdminDashboard() {
             disabled={isExporting}
           >
             {isExporting ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={colors.accent} />
             ) : (
               <Ionicons name="download-outline" size={20} color={colors.text} />
             )}
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
               <Text style={styles.exportTitle}>Exportar fichajes</Text>
               <Text style={styles.exportDesc}>Último mes en CSV</Text>
             </View>
-            <Ionicons name="share-outline" size={20} color={colors.textMuted} />
+            <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -260,7 +260,7 @@ export default function AdminDashboard() {
             disabled={isExporting}
           >
             {isExporting ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color={colors.accent} />
             ) : (
               <Ionicons name="stats-chart-outline" size={20} color={colors.text} />
             )}
@@ -268,7 +268,7 @@ export default function AdminDashboard() {
               <Text style={styles.exportTitle}>Resumen de horas</Text>
               <Text style={styles.exportDesc}>Por trabajador, último mes</Text>
             </View>
-            <Ionicons name="share-outline" size={20} color={colors.textMuted} />
+            <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: typography.fontSize.md,
-    color: colors.primary,
+    color: colors.accent,
     fontWeight: '600',
   },
   statsGrid: {
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   alertCard: {
     flexDirection: 'row',
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   workerCard: {
     flexDirection: 'row',
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   workerInitials: {
-    color: colors.background,
+    color: colors.text,
     fontWeight: '700',
     fontSize: typography.fontSize.sm,
   },
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   },
   workerMeta: {
     fontSize: typography.fontSize.sm,
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   workerStatus: {
     marginLeft: spacing.sm,
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   },
   exportDesc: {
     fontSize: typography.fontSize.sm,
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   exportButtonDisabled: {
     opacity: 0.6,
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
   },
   activityMeta: {
     fontSize: typography.fontSize.xs,
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   activityTime: {
     fontSize: typography.fontSize.sm,
@@ -545,6 +545,6 @@ const styles = StyleSheet.create({
   },
   quickActionDesc: {
     fontSize: typography.fontSize.sm,
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
 });

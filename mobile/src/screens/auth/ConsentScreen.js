@@ -132,10 +132,10 @@ export default function ConsentScreen() {
             disabled={isLoading || !gdprConsent || !locationConsent}
           >
             {isLoading ? (
-              <ActivityIndicator color={colors.background} />
+              <ActivityIndicator color={colors.text} />
             ) : (
               <>
-                <Ionicons name="checkmark-circle" size={22} color={colors.background} />
+                <Ionicons name="checkmark-circle" size={22} color={colors.text} />
                 <Text style={styles.acceptButtonText}>Aceptar y continuar</Text>
               </>
             )}
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   acceptButtonText: {
-    color: colors.background,
+    color: colors.text,
     fontSize: typography.fontSize.lg,
     fontWeight: '700',
   },

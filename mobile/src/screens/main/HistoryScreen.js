@@ -212,11 +212,11 @@ export default function HistoryScreen() {
       {/* Lista */}
       {isLoading ? (
         <View style={styles.loading}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={colors.accent} />
         </View>
       ) : records.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="calendar-outline" size={64} color={colors.textMuted} />
+          <Ionicons name="calendar-outline" size={64} color={colors.textSecondary} />
           <Text style={styles.emptyText}>No hay fichajes en este período</Text>
         </View>
       ) : (
@@ -230,7 +230,7 @@ export default function HistoryScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={colors.primary}
+              tintColor={colors.accent}
             />
           }
         />
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   filterButtonActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
   },
   filterText: {
     fontSize: typography.fontSize.sm,
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   filterTextActive: {
-    color: colors.background,
+    color: colors.text,
   },
   summaryCard: {
     flexDirection: 'row',
@@ -291,11 +291,11 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.text,
   },
   summaryLabel: {
     fontSize: typography.fontSize.xs,
-    color: colors.textMuted,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   summaryDivider: {
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
   dayHours: {
     fontSize: typography.fontSize.sm,
-    color: colors.primary,
+    color: colors.text,
     fontWeight: '600',
   },
   recordItem: {
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   },
   recordWorksite: {
     fontSize: typography.fontSize.sm,
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   recordTime: {
     flexDirection: 'row',
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   recordTimeText: {
     fontSize: typography.fontSize.md,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: colors.text,
   },
   warningBadge: {
     padding: 2,
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: typography.fontSize.md,
-    color: colors.textMuted,
+    color: colors.textSecondary,
     marginTop: spacing.md,
   },
 });

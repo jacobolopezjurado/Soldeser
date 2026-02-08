@@ -6,12 +6,12 @@ export default {
     slug: "soldeser-fichaje",
     version: "1.0.0",
     orientation: "portrait",
-    userInterfaceStyle: "automatic",
-    icon: "./assets/icon.png",
+    userInterfaceStyle: "dark",
+    icon: "./assets/logo.png",
     splash: {
-      image: "./assets/splash.png",
+      image: "./assets/logo.png",
       resizeMode: "contain",
-      backgroundColor: "#1E3A5F"
+      backgroundColor: "#0F1729"
     },
     ios: {
       supportsTablet: true,
@@ -23,8 +23,8 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/icon.png",
-        backgroundColor: "#1E3A5F"
+        foregroundImage: "./assets/logo.png",
+        backgroundColor: "#0F1729"
       },
       package: "com.soldeser.fichaje",
       permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
@@ -33,6 +33,17 @@ export default {
       bundler: "metro"
     },
     plugins: [
+      [
+        "expo-splash-screen",
+        {
+          backgroundColor: "#0F1729",
+          image: "./assets/logo.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          ios: { backgroundColor: "#0F1729" },
+          android: { backgroundColor: "#0F1729" }
+        }
+      ],
       [
         "expo-location",
         {

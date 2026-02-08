@@ -108,7 +108,7 @@ export default function ProfileScreen() {
         {value && <Text style={styles.menuValue}>{value}</Text>}
       </View>
       {showArrow && onPress && (
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
       )}
     </TouchableOpacity>
   );
@@ -124,8 +124,8 @@ export default function ProfileScreen() {
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: colors.surfaceLight, true: colors.primaryLight }}
-        thumbColor={value ? colors.primary : colors.textMuted}
+        trackColor={{ false: colors.surfaceLight, true: colors.accentLight }}
+        thumbColor={value ? colors.accent : colors.textSecondary}
         disabled={disabled}
       />
     </View>
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: typography.fontSize.xl,
     fontWeight: '700',
-    color: colors.background,
+    color: colors.text,
   },
   userInfo: {
     flex: 1,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   roleBadge: {
-    backgroundColor: colors.primary + '20',
+    backgroundColor: colors.accent + '20',
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,
     borderRadius: borderRadius.full,
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: typography.fontSize.xs,
-    color: colors.primary,
+    color: colors.accent,
     fontWeight: '600',
   },
   section: {
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: typography.fontSize.sm,
     fontWeight: '600',
-    color: colors.textMuted,
+    color: colors.textSecondary,
     marginBottom: spacing.sm,
     marginLeft: spacing.xs,
     textTransform: 'uppercase',
@@ -358,7 +358,7 @@ const styles = StyleSheet.create({
   },
   menuValue: {
     fontSize: typography.fontSize.sm,
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   divider: {
     height: 1,
@@ -371,11 +371,11 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: typography.fontSize.sm,
-    color: colors.textMuted,
+    color: colors.textSecondary,
   },
   versionSubtext: {
     fontSize: typography.fontSize.xs,
-    color: colors.textMuted,
+    color: colors.textSecondary,
     marginTop: 2,
   },
 });

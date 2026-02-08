@@ -1,37 +1,43 @@
-// Tema de la aplicación - Estética industrial/construcción
+// Tema de la aplicación - Colores del logo Soldeser
+// Paleta: azul corporativo (#1E3A5F) + naranja acento (#E85D04)
 export const colors = {
-  // Colores principales
-  primary: '#E85D04',      // Naranja construcción/seguridad
-  primaryDark: '#DC2F02',
-  primaryLight: '#F48C06',
+  // Colores principales del logo
+  primary: '#1E3A5F',       // Azul Soldeser
+  primaryDark: '#152942',
+  primaryLight: '#2A5190',
   
-  // Fondo oscuro elegante
-  background: '#0D1117',
-  backgroundSecondary: '#161B22',
-  surface: '#21262D',
-  surfaceLight: '#30363D',
+  // Acento naranja (del logo)
+  accent: '#E85D04',
+  accentDark: '#DC2F02',
+  accentLight: '#F48C06',
   
-  // Texto
-  text: '#F0F6FC',
-  textSecondary: '#8B949E',
-  textMuted: '#6E7681',
+  // Fondos
+  background: '#0F1729',
+  backgroundSecondary: '#1E3A5F',
+  surface: '#1A2D4A',
+  surfaceLight: '#243B5C',
+  
+  // Texto (contraste alto sobre fondos oscuros)
+  text: '#FFFFFF',
+  textSecondary: '#B8C5D6',
+  textMuted: '#8B9CB0',
   
   // Estados
-  success: '#3FB950',
-  successLight: '#238636',
-  warning: '#D29922',
-  error: '#F85149',
-  errorLight: '#DA3633',
-  info: '#58A6FF',
+  success: '#22C55E',
+  successLight: '#4ADE80',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  errorLight: '#F87171',
+  info: '#3B82F6',
   
   // Otros
-  border: '#30363D',
-  divider: '#21262D',
+  border: '#334155',
+  divider: '#1E293B',
   overlay: 'rgba(0, 0, 0, 0.6)',
   
   // Fichaje
-  clockIn: '#3FB950',
-  clockOut: '#F85149',
+  clockIn: '#22C55E',
+  clockOut: '#EF4444',
 };
 
 export const spacing = {
