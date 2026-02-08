@@ -60,7 +60,8 @@ export default {
         }
       ],
       "expo-asset",
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
     ],
     extra: {
       apiUrlDev: process.env.API_URL_DEV || "http://localhost:3001/api",

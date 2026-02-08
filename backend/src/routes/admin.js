@@ -1,5 +1,5 @@
 const express = require('express');
-const { query, validationResult } = require('express-validator');
+const { query, param, validationResult } = require('express-validator');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate, authorize } = require('../middleware/auth');
 const { asyncHandler } = require('../middleware/errorHandler');
@@ -212,6 +212,104 @@ router.get(
 );
 
 /**
+ * GET /api/admin/charts-data
+ * Datos agregados para gráficas (últimos 7 días)
+ */
+router.get(
+  '/charts-data',
+  authenticate,
+  authorize('ADMIN', 'SUPERVISOR'),
+  asyncHandler(async (req, res) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+    const clocksByDay = [];
+    const hoursByWorksite = {};
+    let outsideGeofenceCount = 0;
+
+    for (let d = new Date(sevenDaysAgo); d <= today; d.setDate(d.getDate() + 1)) {
+      const dayStart = new Date(d);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayEnd.getDate() + 1);
+
+      const dayClocks = await prisma.clockRecord.findMany({
+        where: { timestamp: { gte: dayStart, lt: dayEnd } },
+        include: { worksite: { select: { name: true } } },
+      });
+
+      let dayHours = 0;
+      const inRecords = dayClocks.filter(r => r.type === 'CLOCK_IN');
+      for (const inR of inRecords) {
+        const outR = dayClocks.find(r => r.type === 'CLOCK_OUT' && r.userId === inR.userId && new Date(r.timestamp) > new Date(inR.timestamp));
+        if (outR) {
+          dayHours += (new Date(outR.timestamp) - new Date(inR.timestamp)) / (1000 * 60 * 60);
+          const wsName = inR.worksite?.name || 'Sin obra';
+          hoursByWorksite[wsName] = (hoursByWorksite[wsName] || 0) + (new Date(outR.timestamp) - new Date(inR.timestamp)) / (1000 * 60 * 60);
+        }
+      }
+
+      const outside = dayClocks.filter(r => r.isWithinGeofence === false).length;
+      outsideGeofenceCount += outside;
+
+      clocksByDay.push({
+        date: dayStart.toISOString().split('T')[0],
+        label: dayStart.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' }),
+        clockCount: dayClocks.length,
+        hours: Math.round(dayHours * 10) / 10,
+      });
+    }
+
+    const worksiteData = Object.entries(hoursByWorksite).map(([name, hours]) => ({
+      label: name,
+      value: Math.round(hours * 10) / 10,
+    })).sort((a, b) => b.value - a.value);
+
+    const workers = await prisma.user.findMany({
+      where: { isActive: true, role: 'WORKER' },
+      select: { id: true, firstName: true, lastName: true },
+    });
+
+    const workerHours = [];
+    const weekStart = new Date(sevenDaysAgo);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(today);
+    weekEnd.setDate(weekEnd.getDate() + 1);
+
+    for (const w of workers) {
+      const records = await prisma.clockRecord.findMany({
+        where: {
+          userId: w.id,
+          timestamp: { gte: weekStart, lt: weekEnd },
+        },
+        orderBy: { timestamp: 'asc' },
+      });
+      let totalMinutes = 0;
+      for (let i = 0; i < records.length; i++) {
+        if (records[i].type === 'CLOCK_IN') {
+          const out = records.find((r, j) => j > i && r.type === 'CLOCK_OUT');
+          if (out) totalMinutes += (new Date(out.timestamp) - new Date(records[i].timestamp)) / (1000 * 60);
+        }
+      }
+      workerHours.push({
+        label: `${w.firstName} ${w.lastName?.charAt(0) || ''}.`,
+        value: Math.round((totalMinutes / 60) * 10) / 10,
+      });
+    }
+    workerHours.sort((a, b) => b.value - a.value);
+
+    res.json({
+      clocksByDay,
+      hoursByWorksite: worksiteData,
+      workerHours,
+      outsideGeofenceCount,
+    });
+  })
+);
+
+/**
  * GET /api/admin/attendance-report
  * Reporte de asistencia por fecha
  */
@@ -320,6 +418,26 @@ router.get(
       payslips,
       total: payslips.length,
     });
+  })
+);
+
+/**
+ * DELETE /api/admin/payslips/:id
+ * Eliminar nómina (solo admin/supervisor)
+ */
+router.delete(
+  '/payslips/:id',
+  authenticate,
+  authorize('ADMIN', 'SUPERVISOR'),
+  [param('id').isUUID()],
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const payslip = await prisma.payslip.findUnique({ where: { id } });
+    if (!payslip) {
+      return res.status(404).json({ error: 'Nómina no encontrada' });
+    }
+    await prisma.payslip.delete({ where: { id } });
+    res.json({ message: 'Nómina eliminada' });
   })
 );
 

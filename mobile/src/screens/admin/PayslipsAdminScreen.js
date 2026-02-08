@@ -10,8 +10,10 @@ import {
   TouchableOpacity,
   Modal,
   Dimensions,
-  Linking,
+  Alert,
 } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -26,6 +28,28 @@ export default function PayslipsAdminScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  const handleDownloadPayslip = async (item) => {
+    try {
+      setDownloadingId(item.id);
+      const filename = item.fileName || `nomina_${item.id}.jpg`;
+      const localUri = FileSystem.documentDirectory + filename;
+      await FileSystem.downloadAsync(item.fileUrl, localUri);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(localUri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Descargar nómina',
+        });
+      } else {
+        Alert.alert('Éxito', `Guardada en: ${localUri}`);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'No se pudo descargar la nómina.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const fetchPayslips = useCallback(async () => {
     try {
@@ -123,10 +147,15 @@ export default function PayslipsAdminScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.openButton}
-                onPress={() => Linking.openURL(item.fileUrl)}
+                onPress={() => handleDownloadPayslip(item)}
+                disabled={downloadingId === item.id}
               >
-                <Ionicons name="open-outline" size={18} color={colors.accent} />
-                <Text style={styles.openButtonText}>Abrir en navegador</Text>
+                {downloadingId === item.id ? (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                ) : (
+                  <Ionicons name="download-outline" size={18} color={colors.accent} />
+                )}
+                <Text style={styles.openButtonText}>Descargar nómina</Text>
               </TouchableOpacity>
             </View>
           ))}

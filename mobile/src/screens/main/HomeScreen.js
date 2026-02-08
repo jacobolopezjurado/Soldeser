@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 import { api } from "../../config/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { useOffline } from "../../contexts/OfflineContext";
@@ -26,6 +28,7 @@ import {
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN" || user?.role === "SUPERVISOR";
   const {
     isOnline,
     pendingCount,
@@ -38,6 +41,10 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isClocking, setIsClocking] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState("week");
+  const [historyRecords, setHistoryRecords] = useState([]);
+  const [historySummary, setHistorySummary] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [pulseAnim] = useState(new Animated.Value(1));
 
@@ -71,10 +78,12 @@ export default function HomeScreen() {
     }
   }, [status?.isClockedIn]);
 
-  // Cargar estado inicial
   useEffect(() => {
     fetchStatus();
   }, []);
+  useEffect(() => {
+    fetchHistory();
+  }, [historyFilter, isOnline]);
 
   const fetchStatus = async () => {
     try {
@@ -90,14 +99,35 @@ export default function HomeScreen() {
     }
   };
 
+  const fetchHistory = useCallback(async () => {
+    if (!isOnline) return;
+    try {
+      const now = new Date();
+      let startDate = new Date();
+      switch (historyFilter) {
+        case "today": startDate.setHours(0, 0, 0, 0); break;
+        case "week": startDate.setDate(now.getDate() - 7); break;
+        case "month": startDate.setMonth(now.getMonth() - 1); break;
+      }
+      const res = await api.get("/clock/history", {
+        params: { startDate: startDate.toISOString(), endDate: now.toISOString(), limit: 100 },
+      });
+      setHistoryRecords(res.data.records || []);
+      setHistorySummary(res.data.summary || null);
+    } catch (err) {
+      console.error("Error historial:", err);
+    }
+  }, [isOnline, historyFilter]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchStatus();
+    await fetchHistory();
     if (isOnline && pendingCount > 0) {
       await syncPendingRecords();
     }
     setRefreshing(false);
-  }, [isOnline, pendingCount]);
+  }, [isOnline, pendingCount, fetchHistory]);
 
   const handleClock = async (type) => {
     setIsClocking(true);
@@ -188,7 +218,65 @@ export default function HomeScreen() {
     });
   };
 
+  const handleExportCSV = async (type) => {
+    try {
+      setIsExporting(true);
+      const today = new Date();
+      const monthAgo = new Date(today);
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      const endpoint = type === "records" ? "/export/clock-records/csv" : "/export/hours-summary/csv";
+      const response = await api.get(endpoint, {
+        params: { startDate: monthAgo.toISOString(), endDate: today.toISOString() },
+        responseType: "text",
+      });
+      const filename = type === "records" ? `fichajes_${today.toISOString().split("T")[0]}.csv` : `resumen_horas_${today.toISOString().split("T")[0]}.csv`;
+      const fileUri = FileSystem.documentDirectory + filename;
+      await FileSystem.writeAsStringAsync(fileUri, response.data);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: "text/csv",
+          dialogTitle: "Exportar fichajes",
+          UTI: "public.comma-separated-values-text",
+        });
+      } else {
+        Alert.alert("Éxito", `Archivo guardado en: ${fileUri}`);
+      }
+    } catch (error) {
+      console.error("Error exportando:", error);
+      Alert.alert("Error", "No se pudo exportar. Verifica tu conexión.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const isClockedIn = status?.isClockedIn || false;
+
+  const groupRecordsByDate = () => {
+    const grouped = {};
+    historyRecords.forEach((record) => {
+      const date = new Date(record.timestamp).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+      if (!grouped[date]) grouped[date] = [];
+      grouped[date].push(record);
+    });
+    return Object.entries(grouped).map(([date, data]) => ({ date, data: data.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)) }));
+  };
+
+  const renderHistoryRecord = (item) => {
+    const isEntry = item.type === "CLOCK_IN";
+    const time = new Date(item.timestamp).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+    return (
+      <View key={item.id} style={styles.recordItem}>
+        <View style={[styles.recordIcon, isEntry ? styles.recordIconIn : styles.recordIconOut]}>
+          <Ionicons name={isEntry ? "enter-outline" : "exit-outline"} size={18} color={isEntry ? colors.clockIn : colors.clockOut} />
+        </View>
+        <View style={styles.recordInfo}>
+          <Text style={styles.recordType}>{isEntry ? "Entrada" : "Salida"}</Text>
+          {item.worksite && <Text style={styles.recordWorksite}>{item.worksite.name}</Text>}
+        </View>
+        <Text style={styles.recordTimeText}>{time}</Text>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -326,6 +414,96 @@ export default function HomeScreen() {
             Tu ubicación se registrará únicamente al fichar para verificar tu
             presencia en la obra.
           </Text>
+        </View>
+
+        {isAdmin && (
+          <View style={styles.exportSection}>
+            <Text style={styles.exportSectionTitle}>Exportar datos</Text>
+            <TouchableOpacity
+              style={[styles.exportButton, isExporting && styles.exportButtonDisabled]}
+              onPress={() => handleExportCSV("records")}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Ionicons name="download-outline" size={20} color={colors.text} />
+              )}
+              <Text style={styles.exportButtonText}>Exportar fichajes (último mes)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.exportButton, isExporting && styles.exportButtonDisabled]}
+              onPress={() => handleExportCSV("summary")}
+              disabled={isExporting}
+            >
+              {isExporting ? (
+                <ActivityIndicator size="small" color={colors.accent} />
+              ) : (
+                <Ionicons name="stats-chart-outline" size={20} color={colors.text} />
+              )}
+              <Text style={styles.exportButtonText}>Resumen de horas (último mes)</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={styles.historySection}>
+          <Text style={styles.historySectionTitle}>Historial</Text>
+          <View style={styles.historyFilters}>
+            {["today", "week", "month"].map((f) => (
+              <TouchableOpacity
+                key={f}
+                style={[styles.historyFilterBtn, historyFilter === f && styles.historyFilterActive]}
+                onPress={() => setHistoryFilter(f)}
+              >
+                <Text style={[styles.historyFilterText, historyFilter === f && styles.historyFilterTextActive]}>
+                  {f === "today" ? "Hoy" : f === "week" ? "Semana" : "Mes"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {historySummary && (
+            <View style={styles.historySummary}>
+              <View style={styles.historySummaryItem}>
+                <Text style={styles.historySummaryValue}>{historySummary.totalHours}h</Text>
+                <Text style={styles.historySummaryLabel}>Total</Text>
+              </View>
+              <View style={[styles.historySummaryItem, styles.historySummaryDivider]}>
+                <Text style={styles.historySummaryValue}>{historySummary.sessionsCount}</Text>
+                <Text style={styles.historySummaryLabel}>Jornadas</Text>
+              </View>
+              <View style={styles.historySummaryItem}>
+                <Text style={styles.historySummaryValue}>
+                  {historySummary.sessionsCount > 0 ? (parseFloat(historySummary.totalHours) / historySummary.sessionsCount).toFixed(1) : "0"}h
+                </Text>
+                <Text style={styles.historySummaryLabel}>Media/día</Text>
+              </View>
+            </View>
+          )}
+          {historyRecords.length === 0 ? (
+            <View style={styles.historyEmpty}>
+              <Ionicons name="calendar-outline" size={40} color={colors.textSecondary} />
+              <Text style={styles.historyEmptyText}>No hay fichajes en este período</Text>
+            </View>
+          ) : (
+            groupRecordsByDate().map((sec) => {
+              let dayH = 0;
+              for (let i = 0; i < sec.data.length; i++) {
+                if (sec.data[i].type === "CLOCK_IN") {
+                  const out = sec.data.find((x, j) => j > i && x.type === "CLOCK_OUT");
+                  if (out) dayH += (new Date(out.timestamp) - new Date(sec.data[i].timestamp)) / (1000 * 60 * 60);
+                }
+              }
+              return (
+                <View key={sec.date} style={styles.dateSection}>
+                  <View style={styles.dateHeader}>
+                    <Text style={styles.dateText}>{sec.date}</Text>
+                    {dayH > 0 && <Text style={styles.dayHours}>{dayH.toFixed(1)}h</Text>}
+                  </View>
+                  {sec.data.map((r) => renderHistoryRecord(r))}
+                </View>
+              );
+            })
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -499,5 +677,156 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
     lineHeight: 18,
+  },
+  exportSection: {
+    marginTop: spacing.lg,
+  },
+  exportSectionTitle: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: "600",
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  exportButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  exportButtonDisabled: {
+    opacity: 0.6,
+  },
+  exportButtonText: {
+    fontSize: typography.fontSize.md,
+    color: colors.text,
+    fontWeight: "600",
+  },
+  historySection: {
+    marginTop: spacing.xl,
+  },
+  historySectionTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: "700",
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  historyFilters: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  historyFilterBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface,
+  },
+  historyFilterActive: {
+    backgroundColor: colors.accent,
+  },
+  historyFilterText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    fontWeight: "600",
+  },
+  historyFilterTextActive: {
+    color: colors.text,
+  },
+  historySummary: {
+    flexDirection: "row",
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
+  },
+  historySummaryItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  historySummaryDivider: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.border,
+  },
+  historySummaryValue: {
+    fontSize: typography.fontSize.xl,
+    fontWeight: "700",
+    color: colors.text,
+  },
+  historySummaryLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  historyEmpty: {
+    alignItems: "center",
+    padding: spacing.xl,
+  },
+  historyEmptyText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  dateSection: {
+    marginBottom: spacing.lg,
+  },
+  dateHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  dateText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: "600",
+    color: colors.text,
+    textTransform: "capitalize",
+  },
+  dayHours: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text,
+    fontWeight: "600",
+  },
+  recordItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.xs,
+  },
+  recordIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.sm,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  recordIconIn: {
+    backgroundColor: colors.clockIn + "20",
+  },
+  recordIconOut: {
+    backgroundColor: colors.clockOut + "20",
+  },
+  recordInfo: {
+    flex: 1,
+    marginLeft: spacing.sm,
+  },
+  recordType: {
+    fontSize: typography.fontSize.md,
+    fontWeight: "600",
+    color: colors.text,
+  },
+  recordWorksite: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+  },
+  recordTimeText: {
+    fontSize: typography.fontSize.md,
+    fontWeight: "600",
+    color: colors.text,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,12 +13,19 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  Dimensions,
+  LayoutAnimation,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { api } from '../../config/api';
-import { COLORS, FONTS } from '../../config/theme';
+import { COLORS, FONTS, spacing } from '../../config/theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function UsersManagement() {
+  const navigation = useNavigation();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -26,6 +33,8 @@ export default function UsersManagement() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const slideAnim = useRef(new Animated.Value(0)).current;
 
   // Form state
   const [formData, setFormData] = useState({
@@ -134,22 +143,34 @@ export default function UsersManagement() {
     }
   };
 
-  const handleToggleActive = async (user) => {
+  const handleDeleteUser = (user) => {
     Alert.alert(
-      user.isActive ? 'Desactivar usuario' : 'Activar usuario',
-      `¿Estás seguro de ${user.isActive ? 'desactivar' : 'activar'} a ${user.firstName} ${user.lastName}?`,
+      'Eliminar usuario',
+      `¿Eliminar permanentemente a ${user.firstName} ${user.lastName}? Esta acción no se puede deshacer.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
-          text: user.isActive ? 'Desactivar' : 'Activar',
-          style: user.isActive ? 'destructive' : 'default',
-          onPress: async () => {
-            try {
-              await api.put(`/users/${user.id}`, { isActive: !user.isActive });
-              fetchUsers();
-            } catch (error) {
-              Alert.alert('Error', 'No se pudo cambiar el estado del usuario');
-            }
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
+            setDeletingId(user.id);
+            slideAnim.setValue(0);
+            Animated.timing(slideAnim, {
+              toValue: 1,
+              duration: 280,
+              useNativeDriver: true,
+            }).start(async ({ finished }) => {
+              if (!finished) return;
+              setDeletingId(null);
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+              setUsers((prev) => prev.filter((u) => u.id !== user.id));
+              try {
+                await api.delete(`/users/${user.id}`);
+              } catch (error) {
+                setUsers((prev) => [...prev, user]);
+                Alert.alert('Error', error.response?.data?.error || 'No se pudo eliminar el usuario');
+              }
+            });
           },
         },
       ]
@@ -179,12 +200,28 @@ export default function UsersManagement() {
 
   const renderUserItem = ({ item }) => {
     const role = getRoleLabel(item.role);
+    const isDeleting = item.id === deletingId;
     return (
-      <TouchableOpacity
-        style={[styles.userCard, !item.isActive && styles.userCardInactive]}
-        onPress={() => openEditModal(item)}
+      <Animated.View
+        style={[
+          styles.userCardWrapper,
+          isDeleting && {
+            transform: [
+              {
+                translateX: slideAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, SCREEN_WIDTH],
+                }),
+              },
+            ],
+          },
+        ]}
       >
-        <View style={styles.userInfo}>
+        <TouchableOpacity
+          style={styles.userCard}
+          onPress={() => openEditModal(item)}
+        >
+          <View style={styles.userInfo}>
           <View style={styles.userHeader}>
             <Text style={styles.userName}>
               {item.firstName} {item.lastName}
@@ -195,21 +232,15 @@ export default function UsersManagement() {
           </View>
           <Text style={styles.userEmail}>{item.email}</Text>
           <Text style={styles.userDni}>DNI: {item.dni}</Text>
-          {!item.isActive && (
-            <Text style={styles.inactiveLabel}>⚠️ Desactivado</Text>
-          )}
         </View>
         <TouchableOpacity
-          style={styles.toggleButton}
-          onPress={() => handleToggleActive(item)}
+          style={styles.deleteButton}
+          onPress={() => handleDeleteUser(item)}
         >
-          <Ionicons
-            name={item.isActive ? 'toggle' : 'toggle-outline'}
-            size={32}
-            color={item.isActive ? COLORS.success : COLORS.textMuted}
-          />
+          <Ionicons name="trash-outline" size={24} color={COLORS.error} />
         </TouchableOpacity>
       </TouchableOpacity>
+    </Animated.View>
     );
   };
 
@@ -226,7 +257,12 @@ export default function UsersManagement() {
     <View style={styles.container}>
       {/* Header con búsqueda */}
       <View style={styles.header}>
-        <Text style={styles.title}>Gestión de Usuarios</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.title}>Gestión de Usuarios</Text>
+        </View>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color={COLORS.textMuted} />
           <TextInput
@@ -416,11 +452,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  backBtn: {
+    padding: 4,
+    marginRight: 12,
+  },
   title: {
+    flex: 1,
     fontSize: 24,
     fontFamily: FONTS.bold,
     color: COLORS.text,
-    marginBottom: 15,
   },
   searchContainer: {
     flexDirection: 'row',
@@ -441,6 +486,7 @@ const styles = StyleSheet.create({
     padding: 15,
     paddingBottom: 100,
   },
+  userCardWrapper: {},
   userCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 12,
@@ -495,6 +541,10 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.semiBold,
     color: COLORS.error,
     marginTop: 4,
+  },
+  deleteButton: {
+    padding: spacing.sm,
+    justifyContent: 'center',
   },
   toggleButton: {
     padding: 5,

@@ -199,34 +199,36 @@ router.put(
 
 /**
  * DELETE /api/worksites/:id
- * Desactivar obra (soft delete)
+ * Eliminar obra permanentemente
  */
 router.delete(
   '/:id',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMIN', 'SUPERVISOR'),
   [param('id').isUUID()],
   asyncHandler(async (req, res) => {
-    const worksite = await prisma.worksite.update({
-      where: { id: req.params.id },
-      data: { isActive: false },
-    });
-
-    // Desactivar asignaciones
-    await prisma.worksiteAssignment.updateMany({
-      where: { worksiteId: req.params.id },
-      data: { isActive: false },
-    });
+    // Las asignaciones y fichajes se eliminan por cascade
+    try {
+      await prisma.worksite.delete({
+        where: { id: req.params.id },
+      });
+    } catch (prismaErr) {
+      console.error('Error borrando obra:', prismaErr.code, prismaErr.message);
+      if (prismaErr.code === 'P2003') {
+        return res.status(400).json({ error: 'No se puede eliminar: tiene registros vinculados.' });
+      }
+      throw prismaErr;
+    }
 
     await logAudit({
       userId: req.user.id,
       action: AuditActions.WORKSITE_DELETE,
       resource: 'worksite',
-      resourceId: worksite.id,
+      resourceId: req.params.id,
       req,
     });
 
-    res.json({ message: 'Obra desactivada' });
+    res.json({ message: 'Obra eliminada' });
   })
 );
 

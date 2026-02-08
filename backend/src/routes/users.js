@@ -278,33 +278,40 @@ router.put(
 
 /**
  * DELETE /api/users/:id
- * Desactivar usuario (soft delete)
+ * Eliminar usuario permanentemente
  */
 router.delete(
   '/:id',
   authenticate,
-  authorize('ADMIN'),
+  authorize('ADMIN', 'SUPERVISOR'),
   [param('id').isUUID()],
   asyncHandler(async (req, res) => {
     // No permitir auto-eliminación
     if (req.params.id === req.user.id) {
-      return res.status(400).json({ error: 'No puedes desactivar tu propia cuenta' });
+      return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta' });
     }
 
-    const user = await prisma.user.update({
-      where: { id: req.params.id },
-      data: { isActive: false },
-    });
+    try {
+      await prisma.user.delete({
+        where: { id: req.params.id },
+      });
+    } catch (prismaErr) {
+      console.error('Error borrando usuario:', prismaErr.code, prismaErr.message);
+      if (prismaErr.code === 'P2003') {
+        return res.status(400).json({ error: 'No se puede eliminar: tiene registros vinculados. Contacta con soporte.' });
+      }
+      throw prismaErr;
+    }
 
     await logAudit({
       userId: req.user.id,
       action: AuditActions.USER_DELETE,
       resource: 'user',
-      resourceId: user.id,
+      resourceId: req.params.id,
       req,
     });
 
-    res.json({ message: 'Usuario desactivado' });
+    res.json({ message: 'Usuario eliminado' });
   })
 );
 

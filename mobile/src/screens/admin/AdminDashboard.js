@@ -8,12 +8,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 import { api } from '../../config/api';
 import { colors, spacing, borderRadius, typography } from '../../config/theme';
 
@@ -52,55 +49,6 @@ export default function AdminDashboard() {
     await fetchData();
     setRefreshing(false);
   }, []);
-
-  const [isExporting, setIsExporting] = useState(false);
-
-  const handleExportCSV = async (type) => {
-    try {
-      setIsExporting(true);
-      
-      const today = new Date();
-      const monthAgo = new Date(today);
-      monthAgo.setMonth(monthAgo.getMonth() - 1);
-
-      const endpoint = type === 'records' 
-        ? '/export/clock-records/csv'
-        : '/export/hours-summary/csv';
-
-      const response = await api.get(endpoint, {
-        params: {
-          startDate: monthAgo.toISOString(),
-          endDate: today.toISOString(),
-        },
-        responseType: 'text',
-      });
-
-      // Guardar archivo temporalmente
-      const filename = type === 'records' 
-        ? `fichajes_${today.toISOString().split('T')[0]}.csv`
-        : `resumen_horas_${today.toISOString().split('T')[0]}.csv`;
-      
-      const fileUri = FileSystem.documentDirectory + filename;
-      await FileSystem.writeAsStringAsync(fileUri, response.data);
-
-      // Compartir archivo
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri, {
-          mimeType: 'text/csv',
-          dialogTitle: 'Exportar fichajes',
-          UTI: 'public.comma-separated-values-text',
-        });
-      } else {
-        Alert.alert('Éxito', `Archivo guardado en: ${fileUri}`);
-      }
-
-    } catch (error) {
-      console.error('Error exportando:', error);
-      Alert.alert('Error', 'No se pudo exportar. Verifica tu conexión.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
 
   const StatCard = ({ icon, label, value, color = colors.accent }) => (
     <View style={styles.statCard}>
@@ -166,14 +114,28 @@ export default function AdminDashboard() {
         {/* Accesos rápidos */}
         <TouchableOpacity 
           style={styles.quickAction}
-          onPress={() => navigation.navigate('UsersManagement')}
+          onPress={() => navigation.getParent()?.navigate('Gestión')}
         >
-            <View style={[styles.quickActionIcon, { backgroundColor: colors.accent + '20' }]}>
-            <Ionicons name="people" size={24} color={colors.accent} />
+          <View style={[styles.quickActionIcon, { backgroundColor: colors.accent + '20' }]}>
+            <Ionicons name="settings" size={24} color={colors.accent} />
           </View>
           <View style={styles.quickActionInfo}>
-            <Text style={styles.quickActionTitle}>Gestionar Usuarios</Text>
-            <Text style={styles.quickActionDesc}>Añadir, editar y desactivar trabajadores</Text>
+            <Text style={styles.quickActionTitle}>Ir a Gestión</Text>
+            <Text style={styles.quickActionDesc}>Usuarios, obras, cursos y EPIs</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.quickAction}
+          onPress={() => navigation.navigate('ChartsScreen')}
+        >
+          <View style={[styles.quickActionIcon, { backgroundColor: colors.info + '20' }]}>
+            <Ionicons name="bar-chart" size={24} color={colors.info} />
+          </View>
+          <View style={styles.quickActionInfo}>
+            <Text style={styles.quickActionTitle}>Gráficas</Text>
+            <Text style={styles.quickActionDesc}>Fichajes y horas por trabajador</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
@@ -233,76 +195,6 @@ export default function AdminDashboard() {
           )}
         </View>
 
-        {/* Exportar datos */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📊 Exportar datos</Text>
-          
-          <TouchableOpacity 
-            style={[styles.exportButton, isExporting && styles.exportButtonDisabled]}
-            onPress={() => handleExportCSV('records')}
-            disabled={isExporting}
-          >
-            {isExporting ? (
-              <ActivityIndicator size="small" color={colors.accent} />
-            ) : (
-              <Ionicons name="download-outline" size={20} color={colors.text} />
-            )}
-            <View style={styles.exportInfo}>
-              <Text style={styles.exportTitle}>Exportar fichajes</Text>
-              <Text style={styles.exportDesc}>Último mes en CSV</Text>
-            </View>
-            <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={[styles.exportButton, isExporting && styles.exportButtonDisabled]}
-            onPress={() => handleExportCSV('summary')}
-            disabled={isExporting}
-          >
-            {isExporting ? (
-              <ActivityIndicator size="small" color={colors.accent} />
-            ) : (
-              <Ionicons name="stats-chart-outline" size={20} color={colors.text} />
-            )}
-            <View style={styles.exportInfo}>
-              <Text style={styles.exportTitle}>Resumen de horas</Text>
-              <Text style={styles.exportDesc}>Por trabajador, último mes</Text>
-            </View>
-            <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Actividad reciente */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🕐 Actividad reciente</Text>
-          
-          {dashboard?.recentActivity?.slice(0, 5).map((activity) => (
-            <View key={activity.id} style={styles.activityItem}>
-              <View style={[
-                styles.activityIcon,
-                activity.type === 'CLOCK_IN' ? styles.activityIn : styles.activityOut,
-              ]}>
-                <Ionicons 
-                  name={activity.type === 'CLOCK_IN' ? 'enter-outline' : 'exit-outline'} 
-                  size={16} 
-                  color={activity.type === 'CLOCK_IN' ? colors.success : colors.error} 
-                />
-              </View>
-              <View style={styles.activityInfo}>
-                <Text style={styles.activityText}>{activity.worker}</Text>
-                <Text style={styles.activityMeta}>
-                  {activity.type === 'CLOCK_IN' ? 'Entrada' : 'Salida'} • {activity.worksite}
-                </Text>
-              </View>
-              <Text style={styles.activityTime}>
-                {new Date(activity.timestamp).toLocaleTimeString('es-ES', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </Text>
-            </View>
-          ))}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -456,68 +348,6 @@ const styles = StyleSheet.create({
   },
   okBadge: {
     padding: 2,
-  },
-  exportButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.xs,
-    gap: spacing.sm,
-  },
-  exportInfo: {
-    flex: 1,
-  },
-  exportTitle: {
-    fontSize: typography.fontSize.md,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  exportDesc: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-  },
-  exportButtonDisabled: {
-    opacity: 0.6,
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  activityIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  activityIn: {
-    backgroundColor: colors.success + '20',
-  },
-  activityOut: {
-    backgroundColor: colors.error + '20',
-  },
-  activityInfo: {
-    flex: 1,
-    marginLeft: spacing.sm,
-  },
-  activityText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text,
-    fontWeight: '600',
-  },
-  activityMeta: {
-    fontSize: typography.fontSize.xs,
-    color: colors.textSecondary,
-  },
-  activityTime: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-    fontWeight: '600',
   },
   quickAction: {
     flexDirection: 'row',

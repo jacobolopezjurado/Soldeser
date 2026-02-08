@@ -4,8 +4,8 @@ import Constants from 'expo-constants';
 
 // URLs desde variables de entorno (app.config.js)
 const API_URL_DEV = Constants.expoConfig?.extra?.apiUrlDev || 'http://localhost:3001/api';
-// URL de producción en Railway
-const API_URL = 'https://soldeser-production.up.railway.app/api';
+const API_URL_PROD = Constants.expoConfig?.extra?.apiUrlProd || 'https://soldeser-production.up.railway.app/api';
+const API_URL = __DEV__ ? API_URL_DEV : API_URL_PROD;
 
 console.log('🔗 API URL:', API_URL); // Para debug
 

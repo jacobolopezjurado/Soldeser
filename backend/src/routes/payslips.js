@@ -146,6 +146,25 @@ router.get(
 );
 
 /**
+ * DELETE /api/payslips/:id
+ * Eliminar nómina (solo ADMIN)
+ */
+router.delete(
+  '/:id',
+  authenticate,
+  authorize('ADMIN', 'SUPERVISOR'),
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const payslip = await prisma.payslip.findUnique({ where: { id } });
+    if (!payslip) {
+      return res.status(404).json({ error: 'Nómina no encontrada' });
+    }
+    await prisma.payslip.delete({ where: { id } });
+    res.json({ message: 'Nómina eliminada' });
+  })
+);
+
+/**
  * GET /api/payslips/files/:filename
  * Servir archivo de nómina
  */

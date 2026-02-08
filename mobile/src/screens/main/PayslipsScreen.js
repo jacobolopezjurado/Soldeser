@@ -10,12 +10,15 @@ import {
   TouchableOpacity,
   Modal,
   Dimensions,
-  Linking,
   TextInput,
   FlatList,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
@@ -27,6 +30,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function PayslipsScreen() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPERVISOR';
 
   const [payslips, setPayslips] = useState([]);
@@ -40,6 +44,58 @@ export default function PayslipsScreen() {
   const [selectedUserId, setSelectedUserId] = useState(user?.id || null);
   const [isUploading, setIsUploading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [downloadingId, setDownloadingId] = useState(null);
+  const [payslipSearch, setPayslipSearch] = useState('');
+  const [deletingPayslipId, setDeletingPayslipId] = useState(null);
+
+  const handleDeletePayslip = async (item) => {
+    Alert.alert(
+      'Eliminar nómina',
+      `¿Eliminar la nómina de ${item.user?.firstName} ${item.user?.lastName}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setDeletingPayslipId(item.id);
+              await api.delete(`/payslips/${item.id}`);
+              setPayslips((prev) => prev.filter((p) => p.id !== item.id));
+            } catch (err) {
+              Alert.alert('Error', err.response?.data?.error || 'No se pudo eliminar la nómina.');
+            } finally {
+              setDeletingPayslipId(null);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDownloadPayslip = async (item) => {
+    try {
+      setDownloadingId(item.id);
+      const token = await SecureStore.getItemAsync('authToken');
+      const filename = item.fileName || `nomina_${item.id}.jpg`;
+      const localUri = FileSystem.documentDirectory + filename;
+      await FileSystem.downloadAsync(item.fileUrl, localUri, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(localUri, {
+          mimeType: 'image/jpeg',
+          dialogTitle: 'Descargar nómina',
+        });
+      } else {
+        Alert.alert('Éxito', `Guardada en: ${localUri}`);
+      }
+    } catch (err) {
+      Alert.alert('Error', 'No se pudo descargar la nómina.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const fetchPayslips = useCallback(async () => {
     setLoadError(null);
@@ -190,6 +246,13 @@ export default function PayslipsScreen() {
       (u.email || '').toLowerCase().includes(userSearch.toLowerCase())
   );
 
+  const filteredPayslips = payslips.filter(
+    (p) =>
+      `${p.user?.firstName || ''} ${p.user?.lastName || ''}`.toLowerCase().includes(payslipSearch.toLowerCase().trim()) ||
+      (p.user?.email || '').toLowerCase().includes(payslipSearch.toLowerCase().trim()) ||
+      (p.fileName || '').toLowerCase().includes(payslipSearch.toLowerCase().trim())
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -199,6 +262,19 @@ export default function PayslipsScreen() {
           <Text style={styles.uploadButtonText}>Subir</Text>
         </TouchableOpacity>
       </View>
+
+      {!isLoading && !loadError && payslips.length > 0 && (
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color={colors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar por nombre, email..."
+            placeholderTextColor={colors.textMuted}
+            value={payslipSearch}
+            onChangeText={setPayslipSearch}
+          />
+        </View>
+      )}
 
       {isLoading ? (
         <View style={styles.loading}>
@@ -224,6 +300,12 @@ export default function PayslipsScreen() {
             <Text style={styles.emptyButtonText}>Subir nómina</Text>
           </TouchableOpacity>
         </View>
+      ) : filteredPayslips.length === 0 && payslipSearch.trim() ? (
+        <View style={styles.empty}>
+          <Ionicons name="search-outline" size={64} color={colors.textSecondary} />
+          <Text style={styles.emptyTitle}>Sin resultados</Text>
+          <Text style={styles.emptyText}>No coinciden resultados con "{payslipSearch.trim()}"</Text>
+        </View>
       ) : (
         <ScrollView
           contentContainerStyle={styles.list}
@@ -231,10 +313,10 @@ export default function PayslipsScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
           }
         >
-          {payslips.map((item) => (
+          {filteredPayslips.map((item) => (
             <View key={item.id} style={styles.card}>
               <View style={styles.cardHeader}>
-                <View>
+                <View style={styles.cardHeaderLeft}>
                   <Text style={styles.workerName}>
                     {item.user?.firstName} {item.user?.lastName}
                   </Text>
@@ -245,6 +327,15 @@ export default function PayslipsScreen() {
                   )}
                   <Text style={styles.dateText}>{formatDate(item.createdAt)}</Text>
                 </View>
+                {isAdmin && (
+                  <TouchableOpacity
+                    style={styles.deletePayslipBtn}
+                    onPress={() => handleDeletePayslip(item)}
+                    disabled={deletingPayslipId === item.id}
+                  >
+                    <Ionicons name="close-circle" size={28} color={colors.error} />
+                  </TouchableOpacity>
+                )}
               </View>
               <TouchableOpacity
                 style={styles.imageContainer}
@@ -252,79 +343,101 @@ export default function PayslipsScreen() {
               >
                 <Image source={{ uri: item.fileUrl }} style={styles.thumbnail} resizeMode="contain" />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.openButton}
-                onPress={() => Linking.openURL(item.fileUrl)}
-              >
-                <Ionicons name="open-outline" size={18} color={colors.accent} />
-                <Text style={styles.openButtonText}>Abrir imagen</Text>
-              </TouchableOpacity>
+              {!uploadModalVisible && (
+                <TouchableOpacity
+                  style={styles.openButton}
+                  onPress={() => handleDownloadPayslip(item)}
+                  disabled={downloadingId === item.id}
+                >
+                  {downloadingId === item.id ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Ionicons name="download-outline" size={18} color={colors.accent} />
+                  )}
+                  <Text style={styles.openButtonText}>Descargar nómina</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ))}
         </ScrollView>
       )}
 
       {/* Modal subir */}
-      <Modal visible={uploadModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Subir nómina</Text>
-              <TouchableOpacity onPress={() => setUploadModalVisible(false)}>
-                <Ionicons name="close" size={28} color={colors.text} />
+      <Modal visible={uploadModalVisible} animationType="slide" transparent statusBarTranslucent>
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0,0,0,0.92)' }]}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setUploadModalVisible(false)}
+          />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalKeyboardWrap}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          >
+            <View style={[styles.modalContent, { paddingBottom: Math.max(insets.bottom, 16) + 36 }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Subir nómina</Text>
+                <TouchableOpacity onPress={() => setUploadModalVisible(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Ionicons name="close" size={28} color={colors.text} />
+                </TouchableOpacity>
+              </View>
+
+              {isAdmin && (
+                <View style={styles.assignSection}>
+                  <Text style={styles.assignLabel}>Asignar a</Text>
+                  <TextInput
+                    style={styles.modalSearchInput}
+                    placeholder="Buscar por nombre o email..."
+                    placeholderTextColor={colors.textMuted}
+                    value={userSearch}
+                    onChangeText={setUserSearch}
+                    returnKeyType="search"
+                  />
+                  <ScrollView
+                    style={styles.userList}
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled
+                    showsVerticalScrollIndicator={true}
+                  >
+                    {filteredUsers.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={[styles.userItem, selectedUserId === item.id && styles.userItemSelected]}
+                        onPress={() => setSelectedUserId(item.id)}
+                      >
+                        <Text style={styles.userItemText}>
+                          {item.firstName} {item.lastName}
+                        </Text>
+                        <Text style={styles.userItemEmail}>{item.email}</Text>
+                        {selectedUserId === item.id && (
+                          <Ionicons name="checkmark-circle" size={22} color={colors.accent} />
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                    {filteredUsers.length === 0 && (
+                      <Text style={styles.emptyListText}>No se encontraron usuarios</Text>
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={[styles.uploadModalButton, isUploading && styles.uploadModalButtonDisabled]}
+                onPress={handleUpload}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <ActivityIndicator color={colors.text} />
+                ) : (
+                  <>
+                    <Ionicons name="camera" size={24} color={colors.text} />
+                    <Text style={styles.uploadModalButtonText}>Elegir foto o hacer captura</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
-
-            {isAdmin && (
-              <View style={styles.assignSection}>
-                <Text style={styles.assignLabel}>Asignar a</Text>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Buscar por nombre o email..."
-                  placeholderTextColor={colors.textMuted}
-                  value={userSearch}
-                  onChangeText={setUserSearch}
-                />
-                <FlatList
-                  data={filteredUsers}
-                  keyExtractor={(item) => item.id}
-                  style={styles.userList}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity
-                      style={[styles.userItem, selectedUserId === item.id && styles.userItemSelected]}
-                      onPress={() => setSelectedUserId(item.id)}
-                    >
-                      <Text style={styles.userItemText}>
-                        {item.firstName} {item.lastName}
-                      </Text>
-                      <Text style={styles.userItemEmail}>{item.email}</Text>
-                      {selectedUserId === item.id && (
-                        <Ionicons name="checkmark-circle" size={22} color={colors.accent} />
-                      )}
-                    </TouchableOpacity>
-                  )}
-                  ListEmptyComponent={
-                    <Text style={styles.emptyListText}>No se encontraron usuarios</Text>
-                  }
-                />
-              </View>
-            )}
-
-            <TouchableOpacity
-              style={[styles.uploadModalButton, isUploading && styles.uploadModalButtonDisabled]}
-              onPress={handleUpload}
-              disabled={isUploading}
-            >
-              {isUploading ? (
-                <ActivityIndicator color={colors.text} />
-              ) : (
-                <>
-                  <Ionicons name="camera" size={24} color={colors.text} />
-                  <Text style={styles.uploadModalButtonText}>Elegir foto o hacer captura</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -390,6 +503,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.accent,
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    paddingLeft: spacing.sm,
+    color: colors.text,
+    fontSize: typography.fontSize.md,
+  },
   loading: {
     flex: 1,
     justifyContent: 'center',
@@ -435,7 +564,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: spacing.md,
+  },
+  cardHeaderLeft: {
+    flex: 1,
+  },
+  deletePayslipBtn: {
+    padding: spacing.xs,
   },
   workerName: {
     fontSize: typography.fontSize.md,
@@ -477,15 +615,22 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  modalKeyboardWrap: {
+    width: '100%',
   },
   modalContent: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     padding: spacing.lg,
-    maxHeight: '80%',
+    paddingBottom: spacing.xxl + 20,
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -507,7 +652,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: spacing.sm,
   },
-  searchInput: {
+  modalSearchInput: {
     backgroundColor: colors.background,
     borderRadius: borderRadius.md,
     padding: spacing.md,
@@ -515,7 +660,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   userList: {
-    maxHeight: 180,
+    maxHeight: 140,
   },
   userItem: {
     flexDirection: 'row',

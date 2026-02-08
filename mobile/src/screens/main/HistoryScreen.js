@@ -128,8 +128,15 @@ export default function HistoryScreen() {
     );
   };
 
+  const formatHoursMinutes = (decimalHours) => {
+    const totalMinutes = Math.round(decimalHours * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
   const renderDateSection = ({ item }) => {
-    // Calcular horas del día
+    // Calcular horas y minutos reales trabajados
     let dayHours = 0;
     for (let i = 0; i < item.data.length; i++) {
       const record = item.data[i];
@@ -148,7 +155,7 @@ export default function HistoryScreen() {
         <View style={styles.dateHeader}>
           <Text style={styles.dateText}>{item.date}</Text>
           {dayHours > 0 && (
-            <Text style={styles.dayHours}>{dayHours.toFixed(1)}h</Text>
+            <Text style={styles.dayHours}>{formatHoursMinutes(dayHours)}</Text>
           )}
         </View>
         {item.data.map((record, index) => (
@@ -189,7 +196,9 @@ export default function HistoryScreen() {
       {summary && (
         <View style={styles.summaryCard}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryValue}>{summary.totalHours}h</Text>
+            <Text style={styles.summaryValue}>
+              {formatHoursMinutes(parseFloat(summary.totalHours || 0))}
+            </Text>
             <Text style={styles.summaryLabel}>Total horas</Text>
           </View>
           <View style={styles.summaryDivider} />
@@ -200,9 +209,9 @@ export default function HistoryScreen() {
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
             <Text style={styles.summaryValue}>
-              {summary.sessionsCount > 0 
-                ? (parseFloat(summary.totalHours) / summary.sessionsCount).toFixed(1) 
-                : '0'}h
+              {summary.sessionsCount > 0
+                ? formatHoursMinutes(parseFloat(summary.totalHours || 0) / summary.sessionsCount)
+                : '00:00'}
             </Text>
             <Text style={styles.summaryLabel}>Media/día</Text>
           </View>

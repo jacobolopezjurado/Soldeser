@@ -5,10 +5,10 @@ import { colors } from '../config/theme';
 import { useAuth } from '../contexts/AuthContext';
 
 import HomeScreen from '../screens/main/HomeScreen';
-import HistoryScreen from '../screens/main/HistoryScreen';
 import PayslipsScreen from '../screens/main/PayslipsScreen';
 import ProfileScreen from '../screens/main/ProfileScreen';
 import AdminStack from './AdminStack';
+import ManagementStack from './ManagementStack';
 
 const Tab = createBottomTabNavigator();
 
@@ -39,10 +39,10 @@ export default function MainTabs() {
 
           if (route.name === 'Fichaje') {
             iconName = focused ? 'time' : 'time-outline';
-          } else if (route.name === 'Historial') {
-            iconName = focused ? 'calendar' : 'calendar-outline';
           } else if (route.name === 'Nóminas') {
             iconName = focused ? 'document-text' : 'document-text-outline';
+          } else if (route.name === 'Gestión') {
+            iconName = focused ? 'settings' : 'settings-outline';
           } else if (route.name === 'Perfil') {
             iconName = focused ? 'person' : 'person-outline';
           } else if (route.name === 'Admin') {
@@ -61,29 +61,32 @@ export default function MainTabs() {
         }}
       />
       <Tab.Screen 
-        name="Historial" 
-        component={HistoryScreen}
-      />
-      <Tab.Screen 
         name="Nóminas" 
         component={PayslipsScreen}
         options={{ tabBarLabel: 'Nóminas' }}
       />
       {isAdmin && (
-        <Tab.Screen 
-          name="Admin" 
-          component={AdminStack}
-          options={{
-            tabBarLabel: 'Panel',
-            tabBarIcon: ({ focused, color }) => (
-              <Ionicons 
-                name={focused ? 'shield-checkmark' : 'shield-checkmark-outline'} 
-                size={24} 
-                color={color} 
-              />
-            ),
-          }}
-        />
+        <>
+          <Tab.Screen 
+            name="Gestión" 
+            component={ManagementStack}
+            options={{ tabBarLabel: 'Gestión' }}
+          />
+          <Tab.Screen 
+            name="Admin" 
+            component={AdminStack}
+            options={{
+              tabBarLabel: 'Panel',
+              tabBarIcon: ({ focused, color }) => (
+                <Ionicons 
+                  name={focused ? 'shield-checkmark' : 'shield-checkmark-outline'} 
+                  size={24} 
+                  color={color} 
+                />
+              ),
+            }}
+          />
+        </>
       )}
       <Tab.Screen 
         name="Perfil" 
