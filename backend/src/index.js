@@ -12,6 +12,7 @@ const worksitesRoutes = require('./routes/worksites');
 const syncRoutes = require('./routes/sync');
 const exportRoutes = require('./routes/export');
 const adminRoutes = require('./routes/admin');
+const payslipsRoutes = require('./routes/payslips');
 const { errorHandler, getLastError } = require('./middleware/errorHandler');
 const { sanitizeBody, securityHeaders, detectAttacks } = require('./middleware/security');
 
@@ -131,6 +132,7 @@ app.use('/api/worksites', worksitesRoutes);
 app.use('/api/sync', syncRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payslips', payslipsRoutes);
 
 // Ruta base
 app.get('/', (req, res) => {

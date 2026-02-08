@@ -28,5 +28,8 @@ Thumbs.db
 dist/
 build/
 
+# Uploads (archivos subidos por usuarios)
+uploads/
+
 # Firebase
 firebase-service-account.json

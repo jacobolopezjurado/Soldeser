@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,19 +9,31 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
-import { api } from '../../config/api';
-import { useAuth } from '../../contexts/AuthContext';
-import { useOffline } from '../../contexts/OfflineContext';
-import { colors, spacing, borderRadius, typography, shadows } from '../../config/theme';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+import { api } from "../../config/api";
+import { useAuth } from "../../contexts/AuthContext";
+import { useOffline } from "../../contexts/OfflineContext";
+import {
+  colors,
+  spacing,
+  borderRadius,
+  typography,
+  shadows,
+} from "../../config/theme";
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const { isOnline, pendingCount, savePendingRecord, syncPendingRecords, getNearestCachedWorksite } = useOffline();
-  
+  const {
+    isOnline,
+    pendingCount,
+    savePendingRecord,
+    syncPendingRecords,
+    getNearestCachedWorksite,
+  } = useOffline();
+
   const [status, setStatus] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isClocking, setIsClocking] = useState(false);
@@ -52,7 +64,7 @@ export default function HomeScreen() {
             duration: 1000,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       pulse.start();
       return () => pulse.stop();
@@ -68,11 +80,11 @@ export default function HomeScreen() {
     try {
       setIsLoading(true);
       if (isOnline) {
-        const response = await api.get('/clock/status');
+        const response = await api.get("/clock/status");
         setStatus(response.data);
       }
     } catch (error) {
-      console.error('Error obteniendo estado:', error);
+      console.error("Error obteniendo estado:", error);
     } finally {
       setIsLoading(false);
     }
@@ -89,14 +101,15 @@ export default function HomeScreen() {
 
   const handleClock = async (type) => {
     setIsClocking(true);
-    
+
     try {
       // Solicitar permiso de ubicación
-      const { status: permStatus } = await Location.requestForegroundPermissionsAsync();
-      if (permStatus !== 'granted') {
+      const { status: permStatus } =
+        await Location.requestForegroundPermissionsAsync();
+      if (permStatus !== "granted") {
         Alert.alert(
-          'Permiso requerido',
-          'Necesitamos acceso a tu ubicación para verificar tu presencia en la obra.'
+          "Permiso requerido",
+          "Necesitamos acceso a tu ubicación para verificar tu presencia en la obra.",
         );
         return;
       }
@@ -115,70 +128,70 @@ export default function HomeScreen() {
 
       if (isOnline) {
         // Fichar online
-        const endpoint = type === 'in' ? '/clock/in' : '/clock/out';
+        const endpoint = type === "in" ? "/clock/in" : "/clock/out";
         const response = await api.post(endpoint, clockData);
-        
+
         Alert.alert(
-          type === 'in' ? '✅ Entrada fichada' : '✅ Salida fichada',
+          type === "in" ? "✅ Entrada fichada" : "✅ Salida fichada",
           response.data.message,
-          [{ text: 'OK' }]
+          [{ text: "OK" }],
         );
-        
+
         if (response.data.warnings?.length > 0) {
           setTimeout(() => {
-            Alert.alert('⚠️ Aviso', response.data.warnings.join('\n'));
+            Alert.alert("⚠️ Aviso", response.data.warnings.join("\n"));
           }, 500);
         }
       } else {
         // Fichar offline
         const nearestWorksite = getNearestCachedWorksite(
           location.coords.latitude,
-          location.coords.longitude
+          location.coords.longitude,
         );
-        
+
         await savePendingRecord({
-          type: type === 'in' ? 'CLOCK_IN' : 'CLOCK_OUT',
+          type: type === "in" ? "CLOCK_IN" : "CLOCK_OUT",
           ...clockData,
           worksiteId: nearestWorksite?.id,
         });
-        
+
         Alert.alert(
-          '📱 Guardado offline',
-          'El fichaje se ha guardado localmente y se sincronizará cuando tengas conexión.'
+          "📱 Guardado offline",
+          "El fichaje se ha guardado localmente y se sincronizará cuando tengas conexión.",
         );
       }
-      
+
       await fetchStatus();
-      
     } catch (error) {
-      console.error('Error fichando:', error);
-      const message = error.response?.data?.error || 'Error al fichar. Inténtalo de nuevo.';
-      Alert.alert('Error', message);
+      console.error("Error fichando:", error);
+      const message =
+        error.response?.data?.error || "Error al fichar. Inténtalo de nuevo.";
+      Alert.alert("Error", message);
     } finally {
       setIsClocking(false);
     }
   };
 
   const formatTime = (date) => {
-    return date.toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+    return date.toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   };
 
   const formatDate = (date) => {
-    return date.toLocaleDateString('es-ES', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
+    return date.toLocaleDateString("es-ES", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
     });
   };
 
   const isClockedIn = status?.isClockedIn || false;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={
@@ -189,11 +202,8 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.greeting}>
-            Hola, {user?.firstName} 👷
-          </Text>
+          <Text style={styles.greeting}>Hola, {user?.firstName}</Text>
           {!isOnline && (
             <View style={styles.offlineBadge}>
               <Ionicons name="cloud-offline" size={14} color={colors.warning} />
@@ -202,83 +212,101 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Reloj */}
         <View style={styles.clockContainer}>
           <Text style={styles.time}>{formatTime(currentTime)}</Text>
           <Text style={styles.date}>{formatDate(currentTime)}</Text>
         </View>
 
-        {/* Estado actual */}
-        <View style={[
-          styles.statusCard,
-          isClockedIn ? styles.statusCardActive : styles.statusCardInactive,
-        ]}>
+        <View
+          style={[
+            styles.statusCard,
+            isClockedIn ? styles.statusCardActive : styles.statusCardInactive,
+          ]}
+        >
           <View style={styles.statusIndicator}>
-            <View style={[
-              styles.statusDot,
-              isClockedIn ? styles.statusDotActive : styles.statusDotInactive,
-            ]} />
+            <View
+              style={[
+                styles.statusDot,
+                isClockedIn ? styles.statusDotActive : styles.statusDotInactive,
+              ]}
+            />
             <Text style={styles.statusText}>
-              {isLoading ? 'Cargando...' : isClockedIn ? 'EN JORNADA' : 'FUERA DE JORNADA'}
+              {isLoading
+                ? "Cargando..."
+                : isClockedIn
+                  ? "EN JORNADA"
+                  : "FUERA DE JORNADA"}
             </Text>
           </View>
-          
+
           {isClockedIn && status?.currentSession && (
             <View style={styles.sessionInfo}>
               <Text style={styles.sessionLabel}>Entrada:</Text>
               <Text style={styles.sessionValue}>
-                {new Date(status.currentSession.entryTime).toLocaleTimeString('es-ES', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                {new Date(status.currentSession.entryTime).toLocaleTimeString(
+                  "es-ES",
+                  {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  },
+                )}
               </Text>
               <Text style={styles.sessionLabel}>Horas:</Text>
-              <Text style={styles.sessionValue}>{status.currentSession.hoursWorked}h</Text>
+              <Text style={styles.sessionValue}>
+                {status.currentSession.hoursWorked}h
+              </Text>
             </View>
           )}
-          
+
           {status?.currentSession?.worksite && (
             <View style={styles.worksiteInfo}>
-              <Ionicons name="location" size={16} color={colors.textSecondary} />
-              <Text style={styles.worksiteName}>{status.currentSession.worksite.name}</Text>
+              <Ionicons
+                name="location"
+                size={16}
+                color={colors.textSecondary}
+              />
+              <Text style={styles.worksiteName}>
+                {status.currentSession.worksite.name}
+              </Text>
             </View>
           )}
         </View>
 
-        {/* Botón de fichaje */}
-        <Animated.View style={{ transform: [{ scale: isClockedIn ? pulseAnim : 1 }] }}>
+        <Animated.View
+          style={{ transform: [{ scale: isClockedIn ? pulseAnim : 1 }] }}
+        >
           <TouchableOpacity
             style={[
               styles.clockButton,
               isClockedIn ? styles.clockOutButton : styles.clockInButton,
               isClocking && styles.clockButtonDisabled,
             ]}
-            onPress={() => handleClock(isClockedIn ? 'out' : 'in')}
+            onPress={() => handleClock(isClockedIn ? "out" : "in")}
             disabled={isClocking || isLoading}
           >
             {isClocking ? (
               <ActivityIndicator size="large" color={colors.text} />
             ) : (
               <>
-                <Ionicons 
-                  name={isClockedIn ? 'exit-outline' : 'enter-outline'} 
-                  size={48} 
-                  color={colors.text} 
+                <Ionicons
+                  name={isClockedIn ? "exit-outline" : "enter-outline"}
+                  size={48}
+                  color={colors.text}
                 />
                 <Text style={styles.clockButtonText}>
-                  {isClockedIn ? 'FICHAR SALIDA' : 'FICHAR ENTRADA'}
+                  {isClockedIn ? "FICHAR SALIDA" : "FICHAR ENTRADA"}
                 </Text>
               </>
             )}
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Pendientes de sincronización */}
         {pendingCount > 0 && (
           <View style={styles.pendingCard}>
             <Ionicons name="sync" size={20} color={colors.warning} />
             <Text style={styles.pendingText}>
-              {pendingCount} fichaje{pendingCount > 1 ? 's' : ''} pendiente{pendingCount > 1 ? 's' : ''} de sincronizar
+              {pendingCount} fichaje{pendingCount > 1 ? "s" : ""} pendiente
+              {pendingCount > 1 ? "s" : ""} de sincronizar
             </Text>
             {isOnline && (
               <TouchableOpacity onPress={syncPendingRecords}>
@@ -288,11 +316,15 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Info */}
         <View style={styles.infoCard}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
+          <Ionicons
+            name="information-circle-outline"
+            size={20}
+            color={colors.textSecondary}
+          />
           <Text style={styles.infoText}>
-            Tu ubicación se registrará únicamente al fichar para verificar tu presencia en la obra.
+            Tu ubicación se registrará únicamente al fichar para verificar tu
+            presencia en la obra.
           </Text>
         </View>
       </ScrollView>
@@ -300,7 +332,7 @@ export default function HomeScreen() {
   );
 }
 
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 const styles = StyleSheet.create({
   container: {
@@ -311,20 +343,20 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: spacing.lg,
   },
   greeting: {
     fontSize: typography.fontSize.xl,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.text,
   },
   offlineBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.warning + '20',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.warning + "20",
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
@@ -333,22 +365,22 @@ const styles = StyleSheet.create({
   offlineText: {
     fontSize: typography.fontSize.xs,
     color: colors.warning,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   clockContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: spacing.xl,
   },
   time: {
     fontSize: 56,
-    fontWeight: '200',
+    fontWeight: "200",
     color: colors.text,
-    fontVariant: ['tabular-nums'],
+    fontVariant: ["tabular-nums"],
   },
   date: {
     fontSize: typography.fontSize.md,
     color: colors.textSecondary,
-    textTransform: 'capitalize',
+    textTransform: "capitalize",
   },
   statusCard: {
     padding: spacing.md,
@@ -357,16 +389,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statusCardActive: {
-    backgroundColor: colors.success + '10',
-    borderColor: colors.success + '30',
+    backgroundColor: colors.success + "10",
+    borderColor: colors.success + "30",
   },
   statusCardInactive: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
   },
   statusIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
   },
   statusDot: {
@@ -382,13 +414,13 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: typography.fontSize.md,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.text,
     letterSpacing: 1,
   },
   sessionInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: spacing.md,
     gap: spacing.sm,
   },
@@ -399,11 +431,11 @@ const styles = StyleSheet.create({
   sessionValue: {
     fontSize: typography.fontSize.sm,
     color: colors.text,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   worksiteInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: spacing.sm,
     gap: spacing.xs,
   },
@@ -414,8 +446,8 @@ const styles = StyleSheet.create({
   clockButton: {
     height: 160,
     borderRadius: borderRadius.xl,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: spacing.lg,
     ...shadows.lg,
   },
@@ -430,15 +462,15 @@ const styles = StyleSheet.create({
   },
   clockButtonText: {
     fontSize: typography.fontSize.xl,
-    fontWeight: '800',
+    fontWeight: "800",
     color: colors.text,
     marginTop: spacing.sm,
     letterSpacing: 2,
   },
   pendingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.warning + '10',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.warning + "10",
     padding: spacing.md,
     borderRadius: borderRadius.md,
     marginBottom: spacing.md,
@@ -452,11 +484,11 @@ const styles = StyleSheet.create({
   syncButton: {
     fontSize: typography.fontSize.sm,
     color: colors.accent,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   infoCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
     backgroundColor: colors.surface,
     padding: spacing.md,
     borderRadius: borderRadius.md,

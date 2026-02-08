@@ -55,8 +55,27 @@ model User {
   clockRecords  ClockRecord[]
   assignments   WorksiteAssignment[]
   auditLogs     AuditLog[]
+  payslips      Payslip[]
   
   @@map("users")
+}
+
+// Nóminas subidas por trabajadores (solo visibles para admin)
+model Payslip {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  fileName    String    @map("file_name")  // Nombre original
+  fileUrl     String    @map("file_url")   // URL pública (Supabase Storage o path)
+  mimeType    String    @map("mime_type")  // image/jpeg, image/png
+  fileSize    Int?      @map("file_size") // bytes
+  
+  createdAt   DateTime  @default(now()) @map("created_at")
+  
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([createdAt])
+  @@map("payslips")
 }
 
 // Obras / Lugares de trabajo

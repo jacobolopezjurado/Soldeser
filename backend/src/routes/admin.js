@@ -289,4 +289,35 @@ router.get(
   })
 );
 
+/**
+ * GET /api/admin/payslips
+ * Listar todas las nóminas subidas (solo admin)
+ */
+router.get(
+  '/payslips',
+  authenticate,
+  authorize('ADMIN', 'SUPERVISOR'),
+  asyncHandler(async (req, res) => {
+    const payslips = await prisma.payslip.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            dni: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      payslips,
+      total: payslips.length,
+    });
+  })
+);
+
 module.exports = router;
