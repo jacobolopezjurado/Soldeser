@@ -166,20 +166,6 @@ export default function AdminDashboard() {
         {/* Accesos rápidos */}
         <TouchableOpacity 
           style={styles.quickAction}
-          onPress={() => navigation.navigate('PayslipsAdmin')}
-        >
-          <View style={[styles.quickActionIcon, { backgroundColor: colors.accent + '20' }]}>
-            <Ionicons name="document-text" size={24} color={colors.accent} />
-          </View>
-          <View style={styles.quickActionInfo}>
-            <Text style={styles.quickActionTitle}>Nóminas subidas</Text>
-            <Text style={styles.quickActionDesc}>Ver fotos de nóminas de trabajadores</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.quickAction}
           onPress={() => navigation.navigate('UsersManagement')}
         >
             <View style={[styles.quickActionIcon, { backgroundColor: colors.accent + '20' }]}>

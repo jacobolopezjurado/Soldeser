@@ -2,7 +2,6 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AdminDashboard from '../screens/admin/AdminDashboard';
 import UsersManagement from '../screens/admin/UsersManagement';
-import PayslipsAdminScreen from '../screens/admin/PayslipsAdminScreen';
 import { colors } from '../config/theme';
 
 const Stack = createNativeStackNavigator();
@@ -17,7 +16,6 @@ export default function AdminStack() {
     >
       <Stack.Screen name="AdminDashboard" component={AdminDashboard} />
       <Stack.Screen name="UsersManagement" component={UsersManagement} />
-      <Stack.Screen name="PayslipsAdmin" component={PayslipsAdminScreen} />
     </Stack.Navigator>
   );
 }
