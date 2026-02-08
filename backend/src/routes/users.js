@@ -31,7 +31,7 @@ router.get(
     const where = {};
     
     if (role) where.role = role;
-    if (typeof isActive !== 'undefined') where.isActive = isActive === 'true';
+    where.isActive = typeof isActive !== 'undefined' ? isActive === 'true' : true;
     
     if (search) {
       where.OR = [
@@ -292,13 +292,14 @@ router.delete(
     }
 
     try {
-      await prisma.user.delete({
+      await prisma.user.update({
         where: { id: req.params.id },
+        data: { isActive: false },
       });
     } catch (prismaErr) {
-      console.error('Error borrando usuario:', prismaErr.code, prismaErr.message);
-      if (prismaErr.code === 'P2003') {
-        return res.status(400).json({ error: 'No se puede eliminar: tiene registros vinculados. Contacta con soporte.' });
+      console.error('Error desactivando usuario:', prismaErr.code, prismaErr.message);
+      if (prismaErr.code === 'P2025') {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
       }
       throw prismaErr;
     }

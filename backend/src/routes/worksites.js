@@ -24,7 +24,7 @@ router.get(
     const { isActive, city } = req.query;
 
     const where = {};
-    if (typeof isActive !== 'undefined') where.isActive = isActive === 'true';
+    where.isActive = typeof isActive !== 'undefined' ? isActive === 'true' : true;
     if (city) where.city = { contains: city, mode: 'insensitive' };
 
     // Si es trabajador, solo mostrar obras asignadas
@@ -209,13 +209,14 @@ router.delete(
   asyncHandler(async (req, res) => {
     // Las asignaciones y fichajes se eliminan por cascade
     try {
-      await prisma.worksite.delete({
+      await prisma.worksite.update({
         where: { id: req.params.id },
+        data: { isActive: false },
       });
     } catch (prismaErr) {
-      console.error('Error borrando obra:', prismaErr.code, prismaErr.message);
-      if (prismaErr.code === 'P2003') {
-        return res.status(400).json({ error: 'No se puede eliminar: tiene registros vinculados.' });
+      console.error('Error desactivando obra:', prismaErr.code, prismaErr.message);
+      if (prismaErr.code === 'P2025') {
+        return res.status(404).json({ error: 'Obra no encontrada' });
       }
       throw prismaErr;
     }
