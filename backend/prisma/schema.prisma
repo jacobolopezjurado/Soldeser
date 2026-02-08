@@ -52,26 +52,30 @@ model User {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   
   // Relaciones
-  clockRecords  ClockRecord[]
-  assignments   WorksiteAssignment[]
-  auditLogs     AuditLog[]
-  payslips      Payslip[]
+  clockRecords     ClockRecord[]
+  assignments      WorksiteAssignment[]
+  auditLogs        AuditLog[]
+  payslips         Payslip[]       @relation("payslipAssignedTo")
+  payslipsUploaded Payslip[]       @relation("payslipUploadedBy")
   
   @@map("users")
 }
 
-// Nóminas subidas por trabajadores (solo visibles para admin)
+// Nóminas: asignadas a trabajadores (solo visibles para admin)
 model Payslip {
-  id          String    @id @default(uuid())
-  userId      String    @map("user_id")
-  fileName    String    @map("file_name")  // Nombre original
-  fileUrl     String    @map("file_url")   // URL pública (Supabase Storage o path)
-  mimeType    String    @map("mime_type")  // image/jpeg, image/png
-  fileSize    Int?      @map("file_size") // bytes
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")       // Persona a la que se asigna la nómina
+  uploadedById  String?   @map("uploaded_by_id") // Quién subió el archivo
   
-  createdAt   DateTime  @default(now()) @map("created_at")
+  fileName      String    @map("file_name")
+  fileUrl       String    @map("file_url")
+  mimeType      String    @map("mime_type")
+  fileSize      Int?      @map("file_size")
   
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  user          User      @relation("payslipAssignedTo", fields: [userId], references: [id], onDelete: Cascade)
+  uploadedBy    User?     @relation("payslipUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
   
   @@index([userId])
   @@index([createdAt])

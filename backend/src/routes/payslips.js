@@ -30,11 +30,11 @@ const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Solo se permiten imágenes (JPEG, PNG, WebP)'), false);
+      cb(new Error('Solo se permiten imágenes (JPEG, PNG, WebP, HEIC)'), false);
     }
   },
 });
@@ -68,12 +68,28 @@ router.post(
       });
     }
 
+    const assignedToUserId = req.body?.assignedToUserId || req.body?.userId;
+    const isAdmin = ['ADMIN', 'SUPERVISOR'].includes(req.user.role);
+
+    let userId = req.user.id;
+    if (assignedToUserId) {
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'Solo administradores pueden asignar nóminas a otras personas', code: 'FORBIDDEN' });
+      }
+      const targetUser = await prisma.user.findUnique({ where: { id: assignedToUserId, isActive: true } });
+      if (!targetUser) {
+        return res.status(400).json({ error: 'Usuario no encontrado', code: 'USER_NOT_FOUND' });
+      }
+      userId = assignedToUserId;
+    }
+
     const baseUrl = process.env.API_BASE_URL || `${req.protocol || 'https'}://${req.get('host')}`;
     const fileUrl = `${baseUrl}/api/payslips/files/${req.file.filename}`;
 
     const payslip = await prisma.payslip.create({
       data: {
-        userId: req.user.id,
+        userId,
+        uploadedById: req.user.id,
         fileName: req.file.originalname || req.file.filename,
         fileUrl,
         mimeType: req.file.mimetype,
@@ -82,6 +98,9 @@ router.post(
       include: {
         user: {
           select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        uploadedBy: {
+          select: { id: true, firstName: true, lastName: true },
         },
       },
     });
@@ -92,7 +111,37 @@ router.post(
       fileUrl: payslip.fileUrl,
       createdAt: payslip.createdAt,
       user: payslip.user,
+      uploadedBy: payslip.uploadedBy,
     });
+  })
+);
+
+/**
+ * GET /api/payslips
+ * Listar nóminas: trabajadores ven las suyas, admin ve todas
+ */
+router.get(
+  '/',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const isAdmin = ['ADMIN', 'SUPERVISOR'].includes(req.user.role);
+
+    const where = isAdmin ? {} : { userId: req.user.id };
+
+    const payslips = await prisma.payslip.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: { id: true, firstName: true, lastName: true, email: true },
+        },
+        uploadedBy: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+      },
+    });
+
+    res.json({ payslips, total: payslips.length });
   })
 );
 

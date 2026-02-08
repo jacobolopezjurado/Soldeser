@@ -310,6 +310,9 @@ router.get(
             dni: true,
           },
         },
+        uploadedBy: {
+          select: { id: true, firstName: true, lastName: true },
+        },
       },
     });
 
