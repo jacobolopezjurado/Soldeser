@@ -32,7 +32,7 @@ enum SyncStatus {
 // Usuarios del sistema
 model User {
   id            String    @id @default(uuid())
-  firebaseUid   String?   @unique @map("firebase_uid")
+  supabaseUid   String?   @unique @map("supabase_uid")
   email         String    @unique
   passwordHash  String?   @map("password_hash") // Para login alternativo sin Firebase
   pin           String?   // PIN de 4-6 dígitos para fichaje rápido

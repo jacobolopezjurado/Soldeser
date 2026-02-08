@@ -41,7 +41,7 @@ router.post(
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
-    if (!user.isActive) {
+    if (user.isActive === false) {
       await logAudit({
         userId: user.id,
         action: AuditActions.LOGIN_FAILED,
@@ -118,7 +118,7 @@ router.post(
       return res.status(401).json({ error: 'DNI o PIN inválido' });
     }
 
-    if (!user.isActive) {
+    if (user.isActive === false) {
       return res.status(403).json({ error: 'Cuenta desactivada' });
     }
 
@@ -148,13 +148,13 @@ router.post(
 );
 
 /**
- * POST /api/auth/firebase
- * Login/registro con Firebase Auth
+ * POST /api/auth/supabase
+ * Login/registro con Supabase Auth (verifica JWT de Supabase)
  */
 router.post(
-  '/firebase',
+  '/supabase',
   [
-    body('firebaseToken').notEmpty().withMessage('Token de Firebase requerido'),
+    body('accessToken').notEmpty().withMessage('Token de Supabase requerido'),
   ],
   asyncHandler(async (req, res) => {
     const errors = validationResult(req);
@@ -162,49 +162,43 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    // TODO: Verificar token de Firebase con Admin SDK
-    // const decodedToken = await admin.auth().verifyIdToken(firebaseToken);
-    // Por ahora, simularemos la verificación
-
-    const { firebaseToken, userData } = req.body;
-    
-    // En producción, extraer estos datos del token verificado
-    const firebaseUid = userData?.uid || 'firebase-uid-placeholder';
+    const { accessToken, userData } = req.body;
+    const supabaseUid = userData?.id || userData?.sub;
     const email = userData?.email;
 
     if (!email) {
-      return res.status(400).json({ error: 'Email requerido de Firebase' });
+      return res.status(400).json({ error: 'Email requerido de Supabase' });
     }
 
-    // Buscar o crear usuario
-    let user = await prisma.user.findUnique({
-      where: { firebaseUid },
-    });
+    // TODO: Verificar accessToken con Supabase (createClient().auth.getUser(accessToken))
+    // Por ahora confiamos en los datos enviados desde el cliente autenticado
 
+    let user = null;
+    if (supabaseUid) {
+      user = await prisma.user.findUnique({
+        where: { supabaseUid },
+      });
+    }
     if (!user) {
-      // Buscar por email (usuario existente vinculando Firebase)
       user = await prisma.user.findUnique({
         where: { email },
       });
-
-      if (user) {
-        // Vincular Firebase UID al usuario existente
+      if (user && supabaseUid) {
         user = await prisma.user.update({
           where: { id: user.id },
-          data: { firebaseUid },
+          data: { supabaseUid },
         });
       }
-      // Si no existe, el admin debe crear el usuario primero
     }
 
     if (!user) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: 'Usuario no registrado. Contacta con administración.',
         code: 'USER_NOT_REGISTERED',
       });
     }
 
-    if (!user.isActive) {
+    if (user.isActive === false) {
       return res.status(403).json({ error: 'Cuenta desactivada' });
     }
 
@@ -213,7 +207,7 @@ router.post(
     await logAudit({
       userId: user.id,
       action: AuditActions.LOGIN,
-      details: { method: 'firebase' },
+      details: { method: 'supabase' },
       req,
     });
 
@@ -339,7 +333,7 @@ router.post(
 
     if (!user.passwordHash) {
       return res.status(400).json({ 
-        error: 'Usuario sin contraseña configurada (usa Firebase)' 
+        error: 'Usuario sin contraseña configurada (usa Supabase)' 
       });
     }
 
