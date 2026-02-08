@@ -12,7 +12,7 @@ const worksitesRoutes = require('./routes/worksites');
 const syncRoutes = require('./routes/sync');
 const exportRoutes = require('./routes/export');
 const adminRoutes = require('./routes/admin');
-const { errorHandler } = require('./middleware/errorHandler');
+const { errorHandler, getLastError } = require('./middleware/errorHandler');
 const { sanitizeBody, securityHeaders, detectAttacks } = require('./middleware/security');
 
 const app = express();
@@ -91,6 +91,38 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Health check con prueba de base de datos
+app.get('/health/db', async (req, res) => {
+  try {
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    await prisma.$queryRaw`SELECT 1`;
+    await prisma.$disconnect();
+    res.json({ 
+      status: 'ok', 
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error('DB health check failed:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      database: 'disconnected',
+      error: err.message,
+      code: err.code,
+    });
+  }
+});
+
+// Debug: último error (para diagnosticar 500)
+app.get('/api/debug/last-error', (req, res) => {
+  const err = getLastError();
+  if (!err) {
+    return res.json({ message: 'No hay errores recientes' });
+  }
+  res.json(err);
+});
+
 // Rutas API
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
@@ -113,9 +145,14 @@ app.get('/', (req, res) => {
 // Manejo de errores
 app.use(errorHandler);
 
-// 404
+// 404 - Log para depuración
 app.use((req, res) => {
-  res.status(404).json({ error: 'Ruta no encontrada' });
+  console.warn('⚠️ 404 Ruta no encontrada:', req.method, req.originalUrl || req.url);
+  res.status(404).json({ 
+    error: 'Ruta no encontrada',
+    path: req.originalUrl || req.path,
+    method: req.method,
+  });
 });
 
 // Iniciar servidor

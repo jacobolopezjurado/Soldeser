@@ -153,7 +153,7 @@ router.post(
     body('firstName').notEmpty().trim(),
     body('lastName').notEmpty().trim(),
     body('dni').notEmpty().trim().toUpperCase(),
-    body('phone').optional().isMobilePhone('es-ES'),
+    body('phone').optional({ checkFalsy: true }).isMobilePhone('es-ES'),
     body('role').optional().isIn(['ADMIN', 'SUPERVISOR', 'WORKER']),
   ],
   asyncHandler(async (req, res) => {
@@ -174,11 +174,11 @@ router.post(
       data: {
         email,
         passwordHash,
-        pin,
+        pin: pin || null,
         firstName,
         lastName,
-        dni,
-        phone,
+        dni: dni.toUpperCase(),
+        phone: phone || null,
         role,
       },
       select: {

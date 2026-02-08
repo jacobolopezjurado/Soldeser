@@ -1,8 +1,20 @@
 /**
- * Middleware centralizado de manejo de errores
+ * Guardar último error para depuración (solo desarrollo)
  */
+let lastError = null;
+
 const errorHandler = (err, req, res, next) => {
-  console.error('❌ Error:', err);
+  lastError = {
+    message: err?.message || String(err),
+    stack: err?.stack,
+    code: err?.code,
+    path: req?.path,
+    method: req?.method,
+    timestamp: new Date().toISOString(),
+  };
+  console.error('❌ Error:', lastError.message);
+  console.error('Path:', req?.method, req?.path);
+  console.error('Stack:', err?.stack);
 
   // Error de Prisma - Registro no encontrado
   if (err.code === 'P2025') {
@@ -53,11 +65,15 @@ const errorHandler = (err, req, res, next) => {
     ? 'Error interno del servidor' 
     : err.message;
 
-  res.status(statusCode).json({
+  // Siempre enviar algo para que el cliente no reciba vacío
+  const payload = {
     error: message,
     code: err.code || 'INTERNAL_ERROR',
-    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
-  });
+  };
+  if (process.env.NODE_ENV !== 'production') {
+    payload.stack = err.stack;
+  }
+  res.status(statusCode).json(payload);
 };
 
 /**
@@ -67,7 +83,10 @@ const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
+const getLastError = () => lastError;
+
 module.exports = {
   errorHandler,
   asyncHandler,
+  getLastError,
 };

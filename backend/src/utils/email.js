@@ -22,6 +22,10 @@ function generatePassword(length = 12) {
  * Envía email con credenciales de acceso
  */
 async function sendWelcomeEmail(to, firstName, lastName, email, password, appName = 'SOLDESER') {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    throw new Error('SMTP no configurado. Añade SMTP_HOST, SMTP_USER y SMTP_PASS al .env');
+  }
+
   const nodemailer = require('nodemailer');
 
   const transporter = nodemailer.createTransport({
