@@ -1,0 +1,9 @@
+# Railway / Nixpacks config - usa script que maneja migraciones existentes
+[phases.build]
+cmds = ["npm install", "npx prisma generate", "npm run prisma:migrate:deploy"]
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[start]
+cmd = "npm start"

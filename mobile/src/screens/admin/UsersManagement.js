@@ -15,9 +15,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
-import { API_URL } from '../../config/api';
+import { api } from '../../config/api';
 import { COLORS, FONTS } from '../../config/theme';
 
 export default function UsersManagement() {
@@ -43,12 +41,8 @@ export default function UsersManagement() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync('userToken');
-      const response = await axios.get(`${API_URL}/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { limit: 100 },
-      });
-      setUsers(response.data.users);
+      const response = await api.get('/users', { params: { limit: 100 } });
+      setUsers(response.data.users || []);
     } catch (error) {
       console.error('Error cargando usuarios:', error);
       Alert.alert('Error', 'No se pudieron cargar los usuarios');
@@ -112,9 +106,6 @@ export default function UsersManagement() {
     setSaving(true);
 
     try {
-      const token = await SecureStore.getItemAsync('userToken');
-      const headers = { Authorization: `Bearer ${token}` };
-
       // Preparar datos (no enviar campos vacíos)
       const dataToSend = { ...formData };
       if (!dataToSend.password) delete dataToSend.password;
@@ -124,11 +115,11 @@ export default function UsersManagement() {
       if (editingUser) {
         // Actualizar
         delete dataToSend.dni; // DNI no se puede modificar
-        await axios.put(`${API_URL}/users/${editingUser.id}`, dataToSend, { headers });
+        await api.put(`/users/${editingUser.id}`, dataToSend);
         Alert.alert('Éxito', 'Usuario actualizado correctamente');
       } else {
         // Crear
-        await axios.post(`${API_URL}/users`, dataToSend, { headers });
+        await api.post('/users', dataToSend);
         Alert.alert('Éxito', 'Usuario creado correctamente');
       }
 
@@ -154,12 +145,7 @@ export default function UsersManagement() {
           style: user.isActive ? 'destructive' : 'default',
           onPress: async () => {
             try {
-              const token = await SecureStore.getItemAsync('userToken');
-              await axios.put(
-                `${API_URL}/users/${user.id}`,
-                { isActive: !user.isActive },
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
+              await api.put(`/users/${user.id}`, { isActive: !user.isActive });
               fetchUsers();
             } catch (error) {
               Alert.alert('Error', 'No se pudo cambiar el estado del usuario');

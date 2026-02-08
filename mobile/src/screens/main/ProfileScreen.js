@@ -8,16 +8,20 @@ import {
   Switch,
   Alert,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { useOffline } from '../../contexts/OfflineContext';
+import { api } from '../../config/api';
 import { colors, spacing, borderRadius, typography } from '../../config/theme';
 
 export default function ProfileScreen() {
   const { user, logout, updateConsent } = useAuth();
   const { isOnline, pendingCount, syncPendingRecords, isSyncing } = useOffline();
+  const [isUploadingPayslip, setIsUploadingPayslip] = useState(false);
   const [isUpdatingConsent, setIsUpdatingConsent] = useState(false);
 
   const handleLogout = () => {
@@ -67,6 +71,79 @@ export default function ProfileScreen() {
       'Sincronización',
       `Sincronizados: ${result.synced}\nDuplicados: ${result.duplicates || 0}\nErrores: ${result.failed}`
     );
+  };
+
+  const pickAndUploadImage = async (launchFn) => {
+    try {
+      const result = await launchFn({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (result.canceled) return;
+
+      setIsUploadingPayslip(true);
+      const uri = result.assets[0].uri;
+      const filename = uri.split('/').pop() || 'nomina.jpg';
+      const match = filename.match(/\.(\w+)$/);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      const formData = new FormData();
+      formData.append('image', {
+        uri,
+        name: filename,
+        type,
+      });
+
+      const config = { headers: { ...api.defaults.headers.common } };
+      delete config.headers['Content-Type'];
+      await api.post('/payslips/upload', formData, config);
+
+      Alert.alert('Éxito', 'Nómina subida correctamente. Solo los administradores pueden verla.');
+    } catch (err) {
+      console.error('Error subiendo nómina:', err);
+      Alert.alert(
+        'Error',
+        err.response?.data?.error || 'No se pudo subir la nómina. Intenta de nuevo.'
+      );
+    } finally {
+      setIsUploadingPayslip(false);
+    }
+  };
+
+  const handlePayslipUpload = async () => {
+    if (!isOnline) {
+      Alert.alert('Sin conexión', 'Necesitas conexión para subir la nómina.');
+      return;
+    }
+
+    Alert.alert('Subir nómina', '¿Cómo quieres añadir la foto?', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Hacer foto',
+        onPress: async () => {
+          const { status } = await ImagePicker.requestCameraPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert('Permiso requerido', 'Necesitamos acceso a la cámara.');
+            return;
+          }
+          pickAndUploadImage(ImagePicker.launchCameraAsync);
+        },
+      },
+      {
+        text: 'Elegir de galería',
+        onPress: async () => {
+          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (status !== 'granted') {
+            Alert.alert('Permiso requerido', 'Necesitamos acceso a la galería.');
+            return;
+          }
+          pickAndUploadImage(ImagePicker.launchImageLibraryAsync);
+        },
+      },
+    ]);
   };
 
   const handleDataRequest = () => {
@@ -182,6 +259,33 @@ export default function ProfileScreen() {
                 value={isSyncing ? 'Sincronizando...' : 'Tocar para sincronizar'}
               />
             )}
+          </View>
+        </View>
+
+        {/* Nómina */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Nómina</Text>
+          <View style={styles.menuCard}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={handlePayslipUpload}
+              disabled={isUploadingPayslip || !isOnline}
+            >
+              <View style={[styles.menuIcon, { backgroundColor: colors.accent + '20' }]}>
+                {isUploadingPayslip ? (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                ) : (
+                  <Ionicons name="camera" size={20} color={colors.accent} />
+                )}
+              </View>
+              <View style={styles.menuContent}>
+                <Text style={styles.menuLabel}>Subir foto de nómina</Text>
+                <Text style={styles.menuValue}>
+                  {!isOnline ? 'Requiere conexión' : 'Toma una foto o selecciona de galería'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
           </View>
         </View>
 

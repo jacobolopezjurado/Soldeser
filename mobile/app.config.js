@@ -18,7 +18,9 @@ export default {
       bundleIdentifier: "com.soldeser.fichaje",
       infoPlist: {
         NSLocationWhenInUseUsageDescription: "Necesitamos tu ubicación para verificar que estás en la obra al fichar.",
-        NSLocationAlwaysAndWhenInUseUsageDescription: "Necesitamos tu ubicación para verificar que estás en la obra al fichar."
+        NSLocationAlwaysAndWhenInUseUsageDescription: "Necesitamos tu ubicación para verificar que estás en la obra al fichar.",
+        NSCameraUsageDescription: "Necesitamos la cámara para subir fotos de nóminas.",
+        NSPhotoLibraryUsageDescription: "Necesitamos acceder a tus fotos para subir nóminas."
       }
     },
     android: {
@@ -27,7 +29,7 @@ export default {
         backgroundColor: "#0F1729"
       },
       package: "com.soldeser.fichaje",
-      permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "CAMERA", "READ_MEDIA_IMAGES"]
     },
     web: {
       bundler: "metro"
@@ -48,6 +50,13 @@ export default {
         "expo-location",
         {
           locationAlwaysAndWhenInUsePermission: "Soldeser necesita acceder a tu ubicación para verificar tu presencia en la obra."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "Permite a Soldeser acceder a tus fotos para subir nóminas.",
+          cameraPermission: "Permite a Soldeser usar la cámara para fotografiar nóminas."
         }
       ],
       "expo-asset",
